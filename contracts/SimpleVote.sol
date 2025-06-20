@@ -17,8 +17,8 @@
 // SPDX-License-Identifier: MIT
 
 // Solidity コンパイラのバージョンを指定。
-// ここの ^0.8.19 は「0.8.19 以上 0.9.0 未満」を意味します。
-pragma solidity ^0.8.19;
+// ここの ^0.8.30 は「0.8.30 以上 0.9.0 未満」を意味します。
+pragma solidity ^0.8.30;
 
 // ▼ コントラクト（クラスのようなもの）開始
 contract SimpleVote {
