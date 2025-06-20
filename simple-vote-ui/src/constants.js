@@ -32,4 +32,4 @@ export const SIMPLE_VOTE_ABI = [
 ];
 
 // デプロイ時に表示されたアドレスを貼る
-export const SIMPLE_VOTE_ADDRESS = '0x64B218549cc553756fA97b7120d02682Ae696f82';
+export const SIMPLE_VOTE_ADDRESS = '0xb8b042Ec2c32acD2db4Ea2aE04379644826F42D4';
