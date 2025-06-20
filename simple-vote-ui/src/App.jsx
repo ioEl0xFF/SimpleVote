@@ -1,14 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { SIMPLE_VOTE_ABI, SIMPLE_VOTE_ADDRESS } from './constants';
+import { DYNAMIC_VOTE_ABI, DYNAMIC_VOTE_ADDRESS } from './constants';
 
 function App() {
-    const [provider, setProvider] = useState(null);
     const [signer, setSigner] = useState(null);
     const [contract, setContract] = useState(null);
     const [topic, setTopic] = useState('');
-    const [votesA, setVotesA] = useState(0n);
-    const [votesB, setVotesB] = useState(0n);
+    const [choices, setChoices] = useState([]);
+    const [selected, setSelected] = useState(null);
     const [txPending, setTxPending] = useState(false);
 
     /** ① MetaMask へ接続 */
@@ -20,46 +19,55 @@ function App() {
         const _provider = new ethers.BrowserProvider(window.ethereum);
         await _provider.send('eth_requestAccounts', []);
         const _signer = await _provider.getSigner();
-        const _contract = new ethers.Contract(SIMPLE_VOTE_ADDRESS, SIMPLE_VOTE_ABI, _signer);
-        setProvider(_provider);
+        const _contract = new ethers.Contract(
+            DYNAMIC_VOTE_ADDRESS,
+            DYNAMIC_VOTE_ABI,
+            _signer
+        );
         setSigner(_signer);
         setContract(_contract);
     };
 
-    /** ② 票を読み込む */
-    const fetchVotes = useCallback(async () => {
+    /** ② 票と選択肢を取得 */
+    const fetchData = useCallback(async () => {
         if (!contract) return;
-        const [a, b] = await contract.getVotes();
-        setVotesA(a);
-        setVotesB(b);
         setTopic(await contract.topic());
+        const count = await contract.choiceCount();
+        const arr = [];
+        for (let i = 1n; i <= count; i++) {
+            const name = await contract.choice(i);
+            const votes = await contract.voteCount(i);
+            arr.push({ id: Number(i), name, votes });
+        }
+        setChoices(arr);
     }, [contract]);
 
     /** ③ 投票トランザクション */
-    const vote = async (forA) => {
+    const vote = async (choiceId) => {
         if (!contract) return;
         try {
             setTxPending(true);
-            const tx = await contract.vote(forA); // A: true / B: false
+            const tx = await contract.vote(choiceId);
             await tx.wait();
-            await fetchVotes();
+            await fetchData();
         } finally {
             setTxPending(false);
         }
     };
 
-    /** ④ 初期化 & 5 秒ポーリング */
+    /** ④ 初期化とイベント購読 */
     useEffect(() => {
-        if (contract) {
-            fetchVotes();
-            const id = setInterval(fetchVotes, 5000);
-            return () => clearInterval(id);
-        }
-    }, [contract, fetchVotes]);
+        if (!contract) return;
+        fetchData();
+        contract.on('VoteCast', fetchData);
+        return () => {
+            contract.off('VoteCast', fetchData);
+        };
+    }, [contract, fetchData]);
 
     return (
         <main className="flex flex-col items-center gap-6 p-10">
-            <h1 className="text-3xl font-bold">SimpleVote DApp</h1>
+            <h1 className="text-3xl font-bold">DynamicVote DApp</h1>
 
             {!signer ? (
                 <button
@@ -72,22 +80,32 @@ function App() {
                 <>
                     <p className="text-lg">議題: {topic}</p>
 
-                    <div className="flex gap-4">
-                        <button
-                            className="px-4 py-2 rounded-xl bg-green-500 text-white disabled:opacity-50"
-                            disabled={txPending}
-                            onClick={() => vote(true)}
-                        >
-                            🐱 Cats ({votesA.toString()})
-                        </button>
+                    <form
+                        className="flex flex-col gap-2"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            vote(selected);
+                        }}
+                    >
+                        {choices.map((c) => (
+                            <label key={c.id} className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="choice"
+                                    value={c.id}
+                                    onChange={() => setSelected(c.id)}
+                                    checked={selected === c.id}
+                                />
+                                {c.name} ({c.votes.toString()})
+                            </label>
+                        ))}
                         <button
                             className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
-                            disabled={txPending}
-                            onClick={() => vote(false)}
+                            disabled={txPending || selected === null}
                         >
-                            🐶 Dogs ({votesB.toString()})
+                            投票する
                         </button>
-                    </div>
+                    </form>
 
                     {txPending && <p>トランザクション承認待ち…</p>}
                 </>

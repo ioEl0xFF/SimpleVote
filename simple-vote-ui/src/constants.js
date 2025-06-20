@@ -1,17 +1,59 @@
-// Hardhat artifacts から ABI をコピペ
-export const SIMPLE_VOTE_ABI = [
+export const DYNAMIC_VOTE_ABI = [
     {
         inputs: [{ internalType: 'string', name: '_topic', type: 'string' }],
         stateMutability: 'nonpayable',
         type: 'constructor',
     },
     {
-        inputs: [],
-        name: 'getVotes',
-        outputs: [
-            { internalType: 'uint256', name: '', type: 'uint256' },
-            { internalType: 'uint256', name: '', type: 'uint256' },
+        anonymous: false,
+        inputs: [
+            { indexed: false, internalType: 'uint256', name: 'id', type: 'uint256' },
+            { indexed: false, internalType: 'string', name: 'name', type: 'string' },
         ],
+        name: 'ChoiceAdded',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: false, internalType: 'address', name: 'voter', type: 'address' },
+            { indexed: false, internalType: 'uint256', name: 'choiceId', type: 'uint256' },
+        ],
+        name: 'VoteCast',
+        type: 'event',
+    },
+    {
+        inputs: [{ internalType: 'string', name: 'name', type: 'string' }],
+        name: 'addChoice',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        name: 'choice',
+        outputs: [{ internalType: 'string', name: '', type: 'string' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'choiceCount',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'getChoices',
+        outputs: [{ internalType: 'string[]', name: 'names', type: 'string[]' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [{ internalType: 'address', name: '', type: 'address' }],
+        name: 'hasVoted',
+        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
         stateMutability: 'view',
         type: 'function',
     },
@@ -23,13 +65,19 @@ export const SIMPLE_VOTE_ABI = [
         type: 'function',
     },
     {
-        inputs: [{ internalType: 'bool', name: '_voteForA', type: 'bool' }],
+        inputs: [{ internalType: 'uint256', name: 'choiceId', type: 'uint256' }],
         name: 'vote',
         outputs: [],
         stateMutability: 'nonpayable',
         type: 'function',
     },
+    {
+        inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        name: 'voteCount',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
 ];
 
-// デプロイ時に表示されたアドレスを貼る
-export const SIMPLE_VOTE_ADDRESS = '0xb8b042Ec2c32acD2db4Ea2aE04379644826F42D4';
+export const DYNAMIC_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
