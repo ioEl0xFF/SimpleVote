@@ -8,6 +8,7 @@ function App() {
     const [topic, setTopic] = useState('');
     const [choices, setChoices] = useState([]);
     const [selected, setSelected] = useState(null);
+    const [votedId, setVotedId] = useState(0);
     const [txPending, setTxPending] = useState(false);
 
     /** ① MetaMask へ接続 */
@@ -40,7 +41,12 @@ function App() {
             arr.push({ id: Number(i), name, votes });
         }
         setChoices(arr);
-    }, [contract]);
+        if (signer) {
+            const addr = await signer.getAddress();
+            const id = await contract.votedChoiceId(addr);
+            setVotedId(Number(id));
+        }
+    }, [contract, signer]);
 
     /** ③ 投票トランザクション */
     const vote = async (choiceId) => {
@@ -55,13 +61,27 @@ function App() {
         }
     };
 
+    const cancelVote = async () => {
+        if (!contract) return;
+        try {
+            setTxPending(true);
+            const tx = await contract.cancelVote();
+            await tx.wait();
+            await fetchData();
+        } finally {
+            setTxPending(false);
+        }
+    };
+
     /** ④ 初期化とイベント購読 */
     useEffect(() => {
         if (!contract) return;
         fetchData();
         contract.on('VoteCast', fetchData);
+        contract.on('VoteCancelled', fetchData);
         return () => {
             contract.off('VoteCast', fetchData);
+            contract.off('VoteCancelled', fetchData);
         };
     }, [contract, fetchData]);
 
@@ -95,17 +115,28 @@ function App() {
                                     value={c.id}
                                     onChange={() => setSelected(c.id)}
                                     checked={selected === c.id}
+                                    disabled={votedId !== 0}
                                 />
                                 {c.name} ({c.votes.toString()})
                             </label>
                         ))}
                         <button
                             className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
-                            disabled={txPending || selected === null}
+                            disabled={txPending || selected === null || votedId !== 0}
                         >
                             投票する
                         </button>
                     </form>
+
+                    {votedId !== 0 && (
+                        <button
+                            className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
+                            disabled={txPending}
+                            onClick={cancelVote}
+                        >
+                            取消
+                        </button>
+                    )}
 
                     {txPending && <p>トランザクション承認待ち…</p>}
                 </>

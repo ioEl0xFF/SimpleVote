@@ -23,6 +23,15 @@ export const DYNAMIC_VOTE_ABI = [
         type: 'event',
     },
     {
+        anonymous: false,
+        inputs: [
+            { indexed: false, internalType: 'address', name: 'voter', type: 'address' },
+            { indexed: false, internalType: 'uint256', name: 'choiceId', type: 'uint256' },
+        ],
+        name: 'VoteCancelled',
+        type: 'event',
+    },
+    {
         inputs: [{ internalType: 'string', name: 'name', type: 'string' }],
         name: 'addChoice',
         outputs: [],
@@ -52,8 +61,8 @@ export const DYNAMIC_VOTE_ABI = [
     },
     {
         inputs: [{ internalType: 'address', name: '', type: 'address' }],
-        name: 'hasVoted',
-        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+        name: 'votedChoiceId',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
         stateMutability: 'view',
         type: 'function',
     },
@@ -67,6 +76,13 @@ export const DYNAMIC_VOTE_ABI = [
     {
         inputs: [{ internalType: 'uint256', name: 'choiceId', type: 'uint256' }],
         name: 'vote',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'cancelVote',
         outputs: [],
         stateMutability: 'nonpayable',
         type: 'function',

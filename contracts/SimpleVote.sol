@@ -6,7 +6,7 @@
 //   1. topic      : 投票テーマ（例：Cats vs Dogs）
 //   2. agree      : 賛成票の総数
 //   3. disagree   : 反対票の総数
-//   4. hasVoted   : 既に投票したアドレスを記録して二重投票を防ぐ
+//   4. votedChoiceId : 誰がどちらに投票したかを記録する
 //   5. vote()     : 投票ロジック本体
 //   6. getVotes() : 投票結果を外部から読み取るビュー関数
 // -------------------------------------------------------------
@@ -29,14 +29,12 @@ contract SimpleVote {
     uint   public agree;   // 賛成票のカウンタ
     uint   public disagree;// 反対票のカウンタ
 
-    // アドレス => 投票済みかどうか のマッピング
-    mapping(address => bool) public hasVoted;
+    // アドレス => 投票した選択肢 ID (0: 未投票, 1: 賛成, 2: 反対)
+    mapping(address => uint) public votedChoiceId;
 
-    // =============================
-    // 🔸 カスタムエラー
-    // =============================
-    // ガスを節約できる revert 方法。require より効率的＆エラーメッセージが型安全。
-    error AlreadyVoted();
+    /// 投票が取り消されたときに発火
+    event VoteCancelled(address indexed voter, uint choiceId);
+
 
     // =============================
     // 🔸 コンストラクタ
@@ -52,21 +50,28 @@ contract SimpleVote {
     /// @notice 賛成( true ) か 反対( false ) を送信者が投票します。
     /// @param agreeVote true で賛成、false で反対。
     function vote(bool agreeVote) external {
-        // ① 二重投票チェック：既に投票していれば revert で処理を中断
-        if (hasVoted[msg.sender]) {
-            revert AlreadyVoted();
-        }
-        // ② 投票済みフラグを立てる
-        hasVoted[msg.sender] = true;
+        require(votedChoiceId[msg.sender] == 0, "Already voted. Cancel first");
 
-        // ③ 入力に応じてカウンタを増やす
         if (agreeVote) {
-            // 賛成票をインクリメント
             agree++;
+            votedChoiceId[msg.sender] = 1;
         } else {
-            // 反対票をインクリメント
             disagree++;
+            votedChoiceId[msg.sender] = 2;
         }
+    }
+
+    /// @notice 投票を取り消します
+    function cancelVote() external {
+        uint prev = votedChoiceId[msg.sender];
+        require(prev != 0, "No vote to cancel");
+        if (prev == 1) {
+            agree--;
+        } else if (prev == 2) {
+            disagree--;
+        }
+        votedChoiceId[msg.sender] = 0;
+        emit VoteCancelled(msg.sender, prev);
     }
 
     // =============================
