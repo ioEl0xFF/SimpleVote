@@ -24,6 +24,9 @@ describe('SimpleVote', () => {
 
     it('二重投票を防止すること', async () => {
         await vote.connect(addr1).vote(false);
-        await expect(vote.connect(addr1).vote(true)).to.be.revertedWith('You have already voted.');
+        await expect(vote.connect(addr1).vote(true)).to.be.revertedWithCustomError(
+            vote,
+            'AlreadyVoted'
+        );
     });
 });
