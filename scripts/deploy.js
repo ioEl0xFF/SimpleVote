@@ -1,11 +1,18 @@
 const hre = require('hardhat');
 
 async function main() {
+    const topic = process.env.TOPIC || 'Sample Vote';
+    const token = process.env.TOKEN_ADDRESS;
+    const mode = Number(process.env.WEIGHT_MODE || 0);
+
+    if (!token) {
+        throw new Error('TOKEN_ADDRESS env var required');
+    }
+
     const Vote = await hre.ethers.getContractFactory('WeightedDynamicVote');
-    const vote = await Vote.deploy('Cats vs Dogs');
+    const vote = await Vote.deploy(topic, token, mode);
     await vote.waitForDeployment();
-    await vote.addChoice('Cats');
-    await vote.addChoice('Dogs');
+
     console.log('WeightedDynamicVote deployed to:', vote.target);
 }
 

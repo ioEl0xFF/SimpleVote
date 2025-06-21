@@ -27,7 +27,13 @@ npm test
 ## コントラクトデプロイ
 
 ```bash
-npm run deploy
+npx hardhat run scripts/deploy.js --network amoy
+```
+TOKEN_ADDRESS に重み付けに用いるトークンアドレスを、
+WEIGHT_MODE に 0(ERC20) か 1(ERC721) を指定します。
+例:
+```bash
+TOKEN_ADDRESS=0x123... WEIGHT_MODE=0 npx hardhat run scripts/deploy.js --network amoy
 ```
 
 ## フロントエンド
