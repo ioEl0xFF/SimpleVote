@@ -37,7 +37,8 @@ function App() {
         const arr = [];
         for (let i = 1n; i <= count; i++) {
             const name = await contract.choice(i);
-            const votes = await contract.voteCount(i);
+            // voteWeight は選択肢ごとの合計投票重み
+            const votes = await contract.voteWeight(i);
             arr.push({ id: Number(i), name, votes });
         }
         setChoices(arr);
@@ -89,17 +90,17 @@ function App() {
     useEffect(() => {
         if (!contract) return;
         fetchData();
-        contract.on('VoteCast', fetchData);
+        contract.on('WeightedVoteCast', fetchData);
         contract.on('VoteCancelled', fetchData);
         return () => {
-            contract.off('VoteCast', fetchData);
+            contract.off('WeightedVoteCast', fetchData);
             contract.off('VoteCancelled', fetchData);
         };
     }, [contract, fetchData]);
 
     return (
         <main className="flex flex-col items-center gap-6 p-10">
-            <h1 className="text-3xl font-bold">DynamicVote DApp</h1>
+            <h1 className="text-3xl font-bold">WeightedDynamicVote DApp</h1>
 
             {!signer ? (
                 <button
