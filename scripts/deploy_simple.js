@@ -1,3 +1,4 @@
+require('dotenv').config();
 const hre = require('hardhat');
 
 async function main() {

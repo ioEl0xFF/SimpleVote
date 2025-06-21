@@ -18,6 +18,8 @@
 npm install
 ```
 
+`.env.example` をコピーして `.env` を作成し、各項目を編集してください。
+
 ## テスト実行
 
 ```bash
@@ -32,21 +34,21 @@ npx hardhat run scripts/deploy_simple.js --network amoy
 ```
 
 ### DynamicVote
-`TOPIC` と `CHOICES` を環境変数で指定できます。
+`.env` に `TOPIC` と `CHOICES` を用意しておくとスクリプトが読み込みます。
 ```bash
-CHOICES=A,B,C npx hardhat run scripts/deploy_dynamic.js --network amoy
+npx hardhat run scripts/deploy_dynamic.js --network amoy
 ```
 
 ### WeightedSimpleVote
-`TOKEN_ADDRESS` と `WEIGHT_MODE` (0: ERC20, 1: ERC721) を設定します。
+`.env` に `TOKEN_ADDRESS` と `WEIGHT_MODE` (0: ERC20, 1: ERC721) を記述します。
 ```bash
-TOKEN_ADDRESS=0x123... WEIGHT_MODE=0 npx hardhat run scripts/deploy_weighted.js --network amoy
+npx hardhat run scripts/deploy_weighted.js --network amoy
 ```
 
 ### WeightedDynamicVote
-`TOPIC`, `TOKEN_ADDRESS`, `WEIGHT_MODE` を指定します。
+`.env` の `TOPIC`, `CHOICES`, `TOKEN_ADDRESS`, `WEIGHT_MODE` を使ってデプロイします。
 ```bash
-TOKEN_ADDRESS=0x123... WEIGHT_MODE=0 npx hardhat run scripts/deploy_weighted_dynamic.js --network amoy
+npx hardhat run scripts/deploy_weighted_dynamic.js --network amoy
 ```
 
 ## フロントエンド
