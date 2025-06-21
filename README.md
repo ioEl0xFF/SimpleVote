@@ -26,14 +26,27 @@ npm test
 
 ## コントラクトデプロイ
 
+### SimpleVote
 ```bash
-npx hardhat run scripts/deploy.js --network amoy
+npx hardhat run scripts/deploy_simple.js --network amoy
 ```
-TOKEN_ADDRESS に重み付けに用いるトークンアドレスを、
-WEIGHT_MODE に 0(ERC20) か 1(ERC721) を指定します。
-例:
+
+### DynamicVote
+`TOPIC` と `CHOICES` を環境変数で指定できます。
 ```bash
-TOKEN_ADDRESS=0x123... WEIGHT_MODE=0 npx hardhat run scripts/deploy.js --network amoy
+CHOICES=A,B,C npx hardhat run scripts/deploy_dynamic.js --network amoy
+```
+
+### WeightedSimpleVote
+`TOKEN_ADDRESS` と `WEIGHT_MODE` (0: ERC20, 1: ERC721) を設定します。
+```bash
+TOKEN_ADDRESS=0x123... WEIGHT_MODE=0 npx hardhat run scripts/deploy_weighted.js --network amoy
+```
+
+### WeightedDynamicVote
+`TOPIC`, `TOKEN_ADDRESS`, `WEIGHT_MODE` を指定します。
+```bash
+TOKEN_ADDRESS=0x123... WEIGHT_MODE=0 npx hardhat run scripts/deploy_weighted_dynamic.js --network amoy
 ```
 
 ## フロントエンド
