@@ -45,6 +45,18 @@ function App() {
             const addr = await signer.getAddress();
             const id = await contract.votedChoiceId(addr);
             setVotedId(Number(id));
+
+            // 投票状態をコンソールログに出力
+            console.log('=== 投票状態 ===');
+            console.log('ユーザーアドレス:', addr);
+            console.log('投票済み選択肢ID:', Number(id));
+            console.log('投票済みかどうか:', Number(id) !== 0);
+            if (Number(id) !== 0) {
+                const votedChoice = arr.find((c) => c.id === Number(id));
+                console.log('投票した選択肢:', votedChoice ? votedChoice.name : '不明');
+            }
+            console.log('選択肢一覧:', arr);
+            console.log('================');
         }
     }, [contract, signer]);
 
