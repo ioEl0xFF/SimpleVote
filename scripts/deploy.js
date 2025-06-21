@@ -1,12 +1,12 @@
 const hre = require('hardhat');
 
 async function main() {
-    const Vote = await hre.ethers.getContractFactory('DynamicVote');
+    const Vote = await hre.ethers.getContractFactory('WeightedDynamicVote');
     const vote = await Vote.deploy('Cats vs Dogs');
     await vote.waitForDeployment();
     await vote.addChoice('Cats');
     await vote.addChoice('Dogs');
-    console.log('DynamicVote deployed to:', vote.target);
+    console.log('WeightedDynamicVote deployed to:', vote.target);
 }
 
 main().catch((error) => {
