@@ -23,6 +23,15 @@ export const DYNAMIC_VOTE_ABI = [
         type: 'event',
     },
     {
+        anonymous: false,
+        inputs: [
+            { indexed: false, internalType: 'address', name: 'voter', type: 'address' },
+            { indexed: false, internalType: 'uint256', name: 'choiceId', type: 'uint256' },
+        ],
+        name: 'VoteCancelled',
+        type: 'event',
+    },
+    {
         inputs: [{ internalType: 'string', name: 'name', type: 'string' }],
         name: 'addChoice',
         outputs: [],
@@ -52,8 +61,8 @@ export const DYNAMIC_VOTE_ABI = [
     },
     {
         inputs: [{ internalType: 'address', name: '', type: 'address' }],
-        name: 'hasVoted',
-        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+        name: 'votedChoiceId',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
         stateMutability: 'view',
         type: 'function',
     },
@@ -72,6 +81,13 @@ export const DYNAMIC_VOTE_ABI = [
         type: 'function',
     },
     {
+        inputs: [],
+        name: 'cancelVote',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
         inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
         name: 'voteCount',
         outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
@@ -80,4 +96,4 @@ export const DYNAMIC_VOTE_ABI = [
     },
 ];
 
-export const DYNAMIC_VOTE_ADDRESS = '0x35f844585f06c8c3461956DD69f9886cB4F86F77';
+export const DYNAMIC_VOTE_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';

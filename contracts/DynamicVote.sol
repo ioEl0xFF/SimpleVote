@@ -12,8 +12,8 @@ contract DynamicVote is Ownable {
     string public topic;
     /// 選択肢 ID => 選択肢名
     mapping(uint256 => string) public choice;
-    /// アドレス => 投票済みか
-    mapping(address => bool) public hasVoted;
+    /// アドレス => 投票した選択肢 ID (0 は未投票)
+    mapping(address => uint256) public votedChoiceId;
     /// 選択肢 ID => 票数
     mapping(uint256 => uint256) public voteCount;
     /// 選択肢の総数（最大 10）
@@ -23,6 +23,8 @@ contract DynamicVote is Ownable {
     event ChoiceAdded(uint256 id, string name);
     /// 投票が行われたときに発火
     event VoteCast(address voter, uint256 choiceId);
+    /// 投票が取り消されたときに発火
+    event VoteCancelled(address indexed voter, uint256 choiceId);
 
     /// @param _topic 議題
     constructor(string memory _topic) Ownable(msg.sender) {
@@ -45,11 +47,20 @@ contract DynamicVote is Ownable {
      * @param choiceId 1 から choiceCount までの選択肢 ID
      */
     function vote(uint256 choiceId) external {
-        require(!hasVoted[msg.sender], "already voted");
+        require(votedChoiceId[msg.sender] == 0, "Already voted. Cancel first");
         require(choiceId > 0 && choiceId <= choiceCount, "invalid id");
         voteCount[choiceId] += 1;
-        hasVoted[msg.sender] = true;
+        votedChoiceId[msg.sender] = choiceId;
         emit VoteCast(msg.sender, choiceId);
+    }
+
+    /// @notice 投票を取り消します
+    function cancelVote() external {
+        uint256 prev = votedChoiceId[msg.sender];
+        require(prev != 0, "No vote to cancel");
+        voteCount[prev] -= 1;
+        votedChoiceId[msg.sender] = 0;
+        emit VoteCancelled(msg.sender, prev);
     }
 
     /// @notice 全選択肢の名前を配列で取得
