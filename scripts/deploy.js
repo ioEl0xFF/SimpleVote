@@ -1,4 +1,6 @@
 const hre = require('hardhat');
+const fs = require('fs');
+const path = require('path');
 
 async function main() {
     const Vote = await hre.ethers.getContractFactory('DynamicVote');
@@ -7,6 +9,16 @@ async function main() {
     await vote.addChoice('Cats');
     await vote.addChoice('Dogs');
     console.log('DynamicVote deployed to:', vote.target);
+
+    // フロントエンドのアドレスを書き換え
+    const constantsPath = path.join(__dirname, '..', 'simple-vote-ui', 'src', 'constants.js');
+    let data = fs.readFileSync(constantsPath, 'utf8');
+    data = data.replace(
+        /export const DYNAMIC_VOTE_ADDRESS = '0x[0-9a-fA-F]+';/,
+        `export const DYNAMIC_VOTE_ADDRESS = '${vote.target}';`
+    );
+    fs.writeFileSync(constantsPath, data);
+    console.log('Updated DYNAMIC_VOTE_ADDRESS in constants.js');
 
     // WeightedVote 用のトークンをデプロイ
     const Token = await hre.ethers.getContractFactory('MockERC20');
