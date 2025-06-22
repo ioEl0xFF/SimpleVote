@@ -28,7 +28,7 @@ describe('WeightedVote', () => {
         let vote;
         beforeEach(async () => {
             const Vote = await ethers.getContractFactory('WeightedSimpleVote');
-            vote = await Vote.deploy(erc20.target, 0); // ERC20 mode
+            vote = await Vote.deploy('topic', erc20.target, 0); // ERC20 mode
             await vote.waitForDeployment();
         });
 
@@ -61,7 +61,7 @@ describe('WeightedVote', () => {
         let vote;
         beforeEach(async () => {
             const Vote = await ethers.getContractFactory('WeightedSimpleVote');
-            vote = await Vote.deploy(erc721.target, 1); // ERC721 mode
+            vote = await Vote.deploy('topic', erc721.target, 1); // ERC721 mode
             await vote.waitForDeployment();
         });
 

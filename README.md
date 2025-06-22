@@ -40,7 +40,7 @@ npx hardhat run scripts/deploy_dynamic.js --network amoy
 ```
 
 ### WeightedSimpleVote
-`.env` に `TOKEN_ADDRESS` と `WEIGHT_MODE` (0: ERC20, 1: ERC721) を記述します。
+`.env` の `TOPIC`, `TOKEN_ADDRESS`, `WEIGHT_MODE` (0: ERC20, 1: ERC721) を用意します。
 ```bash
 npx hardhat run scripts/deploy_weighted.js --network amoy
 ```

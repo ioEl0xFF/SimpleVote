@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// @title WeightedVote
 /// @notice トークン保有量に応じて重み付けされる投票コントラクト
 contract WeightedSimpleVote {
+    /// 投票テーマ
+    string public topic;
     /// @dev ERC20 か ERC721 かを指定するモード
     enum VoteWeightMode { ERC20, ERC721 }
 
@@ -26,9 +28,15 @@ contract WeightedSimpleVote {
     /// @notice 投票が行われた際に発火するイベント
     event WeightedVote(address indexed voter, uint256 weight, bool forA);
 
+    /// @param _topic 投票テーマ
     /// @param tokenAddress 投票に用いるトークンのアドレス
     /// @param _mode 重み計算モード（ERC20 or ERC721）
-    constructor(address tokenAddress, VoteWeightMode _mode) {
+    constructor(
+        string memory _topic,
+        address tokenAddress,
+        VoteWeightMode _mode
+    ) {
+        topic = _topic;
         token = tokenAddress;
         mode = _mode;
     }
