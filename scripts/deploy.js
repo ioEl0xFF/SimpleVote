@@ -1,8 +1,11 @@
 const hre = require('hardhat');
 
+
 async function main() {
-    const Vote = await hre.ethers.getContractFactory('DynamicVote');
-    const vote = await Vote.deploy('Cats vs Dogs');
+    const Vote = await hre.ethers.getContractFactory('DynamicVoteUpgradeable');
+    const vote = await hre.upgrades.deployProxy(Vote, ['Cats vs Dogs'], {
+        initializer: 'initialize',
+    });
     await vote.waitForDeployment();
     await vote.addChoice('Cats');
     await vote.addChoice('Dogs');

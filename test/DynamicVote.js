@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const { ethers, upgrades } = require('hardhat');
 
 describe('DynamicVote cancel/revote', function () {
     let vote;
@@ -8,9 +8,11 @@ describe('DynamicVote cancel/revote', function () {
     let addr2;
 
     beforeEach(async () => {
-        const Vote = await ethers.getContractFactory('DynamicVote');
+        const Vote = await ethers.getContractFactory('DynamicVoteUpgradeable');
         [owner, addr1, addr2] = await ethers.getSigners();
-        vote = await Vote.deploy('Favorite fruit');
+        vote = await upgrades.deployProxy(Vote, ['Favorite fruit'], {
+            initializer: 'initialize',
+        });
         await vote.waitForDeployment();
         await vote.addChoice('Apple');
         await vote.addChoice('Orange');
@@ -53,5 +55,15 @@ describe('DynamicVote cancel/revote', function () {
         await expect(vote.connect(addr1).vote(1)).to.be.revertedWith(
             'Already voted. Cancel first'
         );
+    });
+
+    it('アップグレード後も状態が保持される', async () => {
+        await vote.connect(addr1).vote(1);
+        const VoteV2 = await ethers.getContractFactory(
+            'DynamicVoteUpgradeableV2'
+        );
+        const upgraded = await upgrades.upgradeProxy(vote, VoteV2);
+        expect(await upgraded.voteCount(1)).to.equal(1n);
+        expect(await upgraded.getVersion()).to.equal(2n);
     });
 });
