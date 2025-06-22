@@ -1,6 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { DYNAMIC_VOTE_ABI, DYNAMIC_VOTE_ADDRESS } from './constants';
+import {
+    DYNAMIC_VOTE_ABI,
+    DYNAMIC_VOTE_ADDRESS,
+    WEIGHTED_VOTE_ABI,
+    WEIGHTED_VOTE_ADDRESS,
+    WEIGHTED_TOKEN_ADDRESS,
+    ERC20_ABI,
+} from './constants';
 
 function App() {
     const [signer, setSigner] = useState(null);
@@ -151,9 +158,156 @@ function App() {
                     )}
 
                     {txPending && <p>トランザクション承認待ち…</p>}
+                    <WeightedVotePanel signer={signer} />
                 </>
             )}
         </main>
+    );
+}
+
+function WeightedVotePanel({ signer }) {
+    const [contract, setContract] = useState(null);
+    const [token, setToken] = useState(null);
+    const [topic, setTopic] = useState('');
+    const [agree, setAgree] = useState(0n);
+    const [disagree, setDisagree] = useState(0n);
+    const [amount, setAmount] = useState('');
+    const [votedId, setVotedId] = useState(0);
+    const [allowance, setAllowance] = useState(0n);
+    const [txPending, setTxPending] = useState(false);
+
+    const init = useCallback(async () => {
+        if (!signer) return;
+        const c = new ethers.Contract(
+            WEIGHTED_VOTE_ADDRESS,
+            WEIGHTED_VOTE_ABI,
+            signer,
+        );
+        const t = new ethers.Contract(
+            WEIGHTED_TOKEN_ADDRESS,
+            ERC20_ABI,
+            signer,
+        );
+        setContract(c);
+        setToken(t);
+    }, [signer]);
+
+    const fetchData = useCallback(async () => {
+        if (!contract || !token) return;
+        setTopic(await contract.topic());
+        const [a, d] = await contract.getVotes();
+        setAgree(a);
+        setDisagree(d);
+        const addr = await signer.getAddress();
+        setVotedId(Number(await contract.votedChoiceId(addr)));
+        setAllowance(await token.allowance(addr, WEIGHTED_VOTE_ADDRESS));
+    }, [contract, token, signer]);
+
+    useEffect(() => {
+        init();
+    }, [init]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const approve = async () => {
+        if (!token) return;
+        try {
+            setTxPending(true);
+            const value = BigInt(amount);
+            const tx = await token.approve(WEIGHTED_VOTE_ADDRESS, value);
+            await tx.wait();
+            await fetchData();
+        } finally {
+            setTxPending(false);
+        }
+    };
+
+    const vote = async (agreeVote) => {
+        if (!contract) return;
+        try {
+            setTxPending(true);
+            const value = BigInt(amount);
+            const tx = await contract.vote(agreeVote, value);
+            await tx.wait();
+            await fetchData();
+        } finally {
+            setTxPending(false);
+        }
+    };
+
+    const cancel = async () => {
+        if (!contract) return;
+        try {
+            setTxPending(true);
+            const tx = await contract.cancelVote();
+            await tx.wait();
+            await fetchData();
+        } finally {
+            setTxPending(false);
+        }
+    };
+
+    return (
+        <section className="flex flex-col gap-4 mt-10 items-center">
+            <h2 className="text-2xl font-bold">WeightedVote</h2>
+            <p>議題: {topic}</p>
+            <p>
+                賛成: {agree.toString()} / 反対: {disagree.toString()}
+            </p>
+            <form
+                className="flex flex-col gap-2"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    vote(true);
+                }}
+            >
+                <input
+                    className="border px-2 py-1"
+                    type="number"
+                    min="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                />
+                {allowance < BigInt(amount || 0) && (
+                    <button
+                        className="px-4 py-2 rounded-xl bg-green-500 text-white disabled:opacity-50"
+                        onClick={approve}
+                        type="button"
+                        disabled={txPending || !amount}
+                    >
+                        Approve
+                    </button>
+                )}
+                <div className="flex gap-2">
+                    <button
+                        className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
+                        disabled={txPending || !amount}
+                    >
+                        賛成
+                    </button>
+                    <button
+                        type="button"
+                        className="px-4 py-2 rounded-xl bg-yellow-500 text-white disabled:opacity-50"
+                        disabled={txPending || !amount}
+                        onClick={() => vote(false)}
+                    >
+                        反対
+                    </button>
+                </div>
+            </form>
+            {votedId !== 0 && (
+                <button
+                    className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
+                    onClick={cancel}
+                    disabled={txPending}
+                >
+                    取消
+                </button>
+            )}
+            {txPending && <p>トランザクション承認待ち…</p>}
+        </section>
     );
 }
 
