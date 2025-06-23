@@ -32,11 +32,20 @@ npm run dev
 
 WebSocket プロバイダと対象コントラクトのアドレス、ABI ファイルを環境変数で指定して実行します。
 
-
 ```bash
 WS_URL=wss://example.com CONTRACT_ADDRESS=0x123... \
 CONTRACT_ABI_PATH=artifacts/contracts/DynamicVote.sol/DynamicVote.json \
 node scripts/eventTracer.js
 ```
+
+`.env` ファイルを利用する場合は、以下の内容を保存してからスクリプトを起動してください。
+
+```env
+WS_URL=wss://example.com
+CONTRACT_ADDRESS=0x123...
+CONTRACT_ABI_PATH=artifacts/contracts/DynamicVote.sol/DynamicVote.json
+```
+
+`WS_URL` は `ws://` または `wss://` で始まる必要があります。
 
 取得したログは `event-log.json` に保存されます。

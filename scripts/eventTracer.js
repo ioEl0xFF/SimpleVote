@@ -13,8 +13,43 @@ async function main() {
         process.exit(1);
     }
 
+    if (!/^wss?:\/\//.test(wsUrl)) {
+        console.error('WS_URL は ws:// または wss:// で始まる URL を指定してください');
+        process.exit(1);
+    }
+
+    if (!ethers.isAddress(address)) {
+        console.error('CONTRACT_ADDRESS が正しくありません');
+        process.exit(1);
+    }
+
+    if (!fs.existsSync(abiPath)) {
+        console.error('CONTRACT_ABI_PATH が存在しません');
+        process.exit(1);
+    }
+
     const provider = new ethers.WebSocketProvider(wsUrl);
-    const abi = JSON.parse(fs.readFileSync(abiPath, 'utf8')).abi;
+
+    provider.websocket.on('open', () => {
+        console.log('WebSocket に接続しました');
+    });
+
+    provider.websocket.on('error', (err) => {
+        console.error('WebSocket エラー:', err.message);
+    });
+
+    provider.websocket.on('close', (code) => {
+        console.error(`WebSocket が終了しました: ${code}`);
+        process.exit(1);
+    });
+    let abi;
+    try {
+        abi = JSON.parse(fs.readFileSync(abiPath, 'utf8')).abi;
+    } catch (err) {
+        console.error('ABI の読み込みに失敗しました:', err.message);
+        process.exit(1);
+    }
+
     const contract = new ethers.Contract(address, abi, provider);
     const logFile = path.join(__dirname, '..', 'event-log.json');
 
