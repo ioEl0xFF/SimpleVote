@@ -28,6 +28,8 @@ contract SimpleVote {
     string public topic;   // 投票テーマ。public 修飾子で自動 Getter が生成される
     uint   public agree;   // 賛成票のカウンタ
     uint   public disagree;// 反対票のカウンタ
+    uint256 public startTime; // 投票開始時刻
+    uint256 public endTime;   // 投票終了時刻
 
     // アドレス => 投票した選択肢 ID (0: 未投票, 1: 賛成, 2: 反対)
     mapping(address => uint) public votedChoiceId;
@@ -40,8 +42,11 @@ contract SimpleVote {
     // 🔸 コンストラクタ
     // =============================
     // デプロイ時に投票テーマを受け取り、状態変数 topic に保存します。
-    constructor(string memory _topic) {
+    constructor(string memory _topic, uint256 _startTime, uint256 _endTime) {
+        require(_endTime > _startTime, "end must be after start");
         topic = _topic;
+        startTime = _startTime;
+        endTime = _endTime;
     }
 
     // =============================
@@ -50,6 +55,10 @@ contract SimpleVote {
     /// @notice 賛成( true ) か 反対( false ) を送信者が投票します。
     /// @param agreeVote true で賛成、false で反対。
     function vote(bool agreeVote) external {
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "Voting closed"
+        );
         require(votedChoiceId[msg.sender] == 0, "Already voted. Cancel first");
 
         if (agreeVote) {
@@ -63,6 +72,10 @@ contract SimpleVote {
 
     /// @notice 投票を取り消します
     function cancelVote() external {
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "Voting closed"
+        );
         uint prev = votedChoiceId[msg.sender];
         require(prev != 0, "No vote to cancel");
         if (prev == 1) {
