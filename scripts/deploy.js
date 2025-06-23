@@ -4,7 +4,10 @@ const path = require('path');
 
 async function main() {
     const Vote = await hre.ethers.getContractFactory('DynamicVote');
-    const vote = await Vote.deploy('Cats vs Dogs');
+    const now = Math.floor(Date.now() / 1000);
+    const start = now + 60;
+    const end = start + 3600;
+    const vote = await Vote.deploy('Cats vs Dogs', start, end);
     await vote.waitForDeployment();
     await vote.addChoice('Cats');
     await vote.addChoice('Dogs');

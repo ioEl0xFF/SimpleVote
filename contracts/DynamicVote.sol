@@ -18,6 +18,10 @@ contract DynamicVote is Ownable {
     mapping(uint256 => uint256) public voteCount;
     /// 選択肢の総数（最大 10）
     uint256 public choiceCount;
+    /// 投票開始時刻
+    uint256 public startTime;
+    /// 投票終了時刻
+    uint256 public endTime;
 
     /// 選択肢が追加されたときに発火
     event ChoiceAdded(uint256 id, string name);
@@ -27,8 +31,17 @@ contract DynamicVote is Ownable {
     event VoteCancelled(address indexed voter, uint256 choiceId);
 
     /// @param _topic 議題
-    constructor(string memory _topic) Ownable(msg.sender) {
+    /// @param _startTime 投票開始時刻
+    /// @param _endTime 投票終了時刻
+    constructor(
+        string memory _topic,
+        uint256 _startTime,
+        uint256 _endTime
+    ) Ownable(msg.sender) {
+        require(_endTime > _startTime, "end must be after start");
         topic = _topic;
+        startTime = _startTime;
+        endTime = _endTime;
     }
 
     /**
@@ -47,6 +60,10 @@ contract DynamicVote is Ownable {
      * @param choiceId 1 から choiceCount までの選択肢 ID
      */
     function vote(uint256 choiceId) external {
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "Voting closed"
+        );
         require(votedChoiceId[msg.sender] == 0, "Already voted. Cancel first");
         require(choiceId > 0 && choiceId <= choiceCount, "invalid id");
         voteCount[choiceId] += 1;
@@ -56,6 +73,10 @@ contract DynamicVote is Ownable {
 
     /// @notice 投票を取り消します
     function cancelVote() external {
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "Voting closed"
+        );
         uint256 prev = votedChoiceId[msg.sender];
         require(prev != 0, "No vote to cancel");
         voteCount[prev] -= 1;
