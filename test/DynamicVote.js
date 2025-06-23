@@ -1,5 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
+const { time } = require('@nomicfoundation/hardhat-toolbox/network-helpers');
 
 describe('DynamicVote cancel/revote', function () {
     let vote;
@@ -10,10 +11,14 @@ describe('DynamicVote cancel/revote', function () {
     beforeEach(async () => {
         const Vote = await ethers.getContractFactory('DynamicVote');
         [owner, addr1, addr2] = await ethers.getSigners();
-        vote = await Vote.deploy('Favorite fruit');
+        const now = await time.latest();
+        const start = Number(now) + 10;
+        const end = start + 1000;
+        vote = await Vote.deploy('Favorite fruit', start, end);
         await vote.waitForDeployment();
         await vote.addChoice('Apple');
         await vote.addChoice('Orange');
+        await time.increaseTo(start);
     });
 
     it('初期トピックが正しい', async () => {
@@ -52,6 +57,28 @@ describe('DynamicVote cancel/revote', function () {
         await vote.connect(addr1).vote(1);
         await expect(vote.connect(addr1).vote(1)).to.be.revertedWith(
             'Already voted. Cancel first'
+        );
+    });
+
+    it('開始前は投票できない', async () => {
+        const Vote = await ethers.getContractFactory('DynamicVote');
+        const now = await time.latest();
+        const start = Number(now) + 100;
+        const end = start + 1000;
+        const newVote = await Vote.deploy('Temp', start, end);
+        await newVote.waitForDeployment();
+        await newVote.addChoice('A');
+        await expect(newVote.connect(addr1).vote(1)).to.be.revertedWith(
+            'voting closed'
+        );
+    });
+
+    it('終了後は投票できない', async () => {
+        const period = await vote.getPeriod();
+        const end = Number(period[1]);
+        await time.increaseTo(end + 1);
+        await expect(vote.connect(addr1).vote(1)).to.be.revertedWith(
+            'voting closed'
         );
     });
 });

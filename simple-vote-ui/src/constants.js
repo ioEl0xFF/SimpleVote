@@ -1,6 +1,10 @@
 export const DYNAMIC_VOTE_ABI = [
     {
-        inputs: [{ internalType: 'string', name: '_topic', type: 'string' }],
+        inputs: [
+            { internalType: 'string', name: '_topic', type: 'string' },
+            { internalType: 'uint256', name: '_start', type: 'uint256' },
+            { internalType: 'uint256', name: '_end', type: 'uint256' },
+        ],
         stateMutability: 'nonpayable',
         type: 'constructor',
     },
@@ -54,6 +58,20 @@ export const DYNAMIC_VOTE_ABI = [
     },
     {
         inputs: [],
+        name: 'startTime',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'endTime',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
         name: 'getChoices',
         outputs: [{ internalType: 'string[]', name: 'names', type: 'string[]' }],
         stateMutability: 'view',
@@ -91,6 +109,23 @@ export const DYNAMIC_VOTE_ABI = [
         inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
         name: 'voteCount',
         outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'getPeriod',
+        outputs: [
+            { internalType: 'uint256', name: '', type: 'uint256' },
+            { internalType: 'uint256', name: '', type: 'uint256' },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'isOpen',
+        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
         stateMutability: 'view',
         type: 'function',
     },

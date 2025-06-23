@@ -19,6 +19,11 @@ contract DynamicVote is Ownable {
     /// 選択肢の総数（最大 10）
     uint256 public choiceCount;
 
+    /// 投票開始時刻
+    uint256 public startTime;
+    /// 投票終了時刻
+    uint256 public endTime;
+
     /// 選択肢が追加されたときに発火
     event ChoiceAdded(uint256 id, string name);
     /// 投票が行われたときに発火
@@ -27,8 +32,11 @@ contract DynamicVote is Ownable {
     event VoteCancelled(address indexed voter, uint256 choiceId);
 
     /// @param _topic 議題
-    constructor(string memory _topic) Ownable(msg.sender) {
+    constructor(string memory _topic, uint256 _start, uint256 _end) Ownable(msg.sender) {
+        require(_end > _start, "end must be later than start");
         topic = _topic;
+        startTime = _start;
+        endTime = _end;
     }
 
     /**
@@ -47,6 +55,11 @@ contract DynamicVote is Ownable {
      * @param choiceId 1 から choiceCount までの選択肢 ID
      */
     function vote(uint256 choiceId) external {
+        // 期間外は投票できない
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "voting closed"
+        );
         require(votedChoiceId[msg.sender] == 0, "Already voted. Cancel first");
         require(choiceId > 0 && choiceId <= choiceCount, "invalid id");
         voteCount[choiceId] += 1;
@@ -69,5 +82,15 @@ contract DynamicVote is Ownable {
         for (uint256 i = 0; i < choiceCount; i++) {
             names[i] = choice[i + 1];
         }
+    }
+
+    /// @notice 投票期間を取得します
+    function getPeriod() external view returns (uint256, uint256) {
+        return (startTime, endTime);
+    }
+
+    /// @notice 現在投票可能かどうか
+    function isOpen() external view returns (bool) {
+        return block.timestamp >= startTime && block.timestamp <= endTime;
     }
 }
