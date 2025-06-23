@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { DYNAMIC_VOTE_ABI, DYNAMIC_VOTE_ADDRESS } from './constants';
+import WeightedVote from './WeightedVote.jsx';
 
 function App() {
     const [signer, setSigner] = useState(null);
@@ -153,6 +154,7 @@ function App() {
                     {txPending && <p>トランザクション承認待ち…</p>}
                 </>
             )}
+            {signer && <WeightedVote signer={signer} />}
         </main>
     );
 }
