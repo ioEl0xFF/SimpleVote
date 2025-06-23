@@ -36,10 +36,13 @@ async function main() {
 
     provider.websocket.on('error', (err) => {
         console.error('WebSocket エラー:', err.message);
+        if (err.message.includes('SSL')) {
+            console.error('SSL 接続に失敗しました。WS_URL が正しいか確認してください');
+        }
     });
 
-    provider.websocket.on('close', (code) => {
-        console.error(`WebSocket が終了しました: ${code}`);
+    provider.websocket.on('close', (code, reason) => {
+        console.error(`WebSocket が終了しました: ${code} ${reason || ''}`);
         process.exit(1);
     });
     let abi;
