@@ -43,7 +43,9 @@ function WeightedVote({ signer }) {
         for (let i = 1n; i <= count; i++) {
             const name = await contract.choice(i);
             const votes = await contract.voteCount(i);
-            arr.push({ id: Number(i), name, votes });
+            // トークンの票数は 18 桁の精度を持つので、Ether 表記へ変換
+            const formatted = ethers.formatEther(votes);
+            arr.push({ id: Number(i), name, votes: formatted });
         }
         setChoices(arr);
         if (signer) {
@@ -133,7 +135,7 @@ function WeightedVote({ signer }) {
                             checked={selected === c.id}
                             disabled={votedId !== 0}
                         />
-                        {c.name} ({c.votes.toString()})
+                        {c.name} ({c.votes})
                     </label>
                 ))}
                 <input
