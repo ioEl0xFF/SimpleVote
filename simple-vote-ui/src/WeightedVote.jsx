@@ -3,7 +3,6 @@ import { ethers } from 'ethers';
 import {
     WEIGHTED_VOTE_ABI,
     WEIGHTED_VOTE_ADDRESS,
-    WEIGHTED_VOTE_TOKEN_ADDRESS,
     ERC20_ABI,
 } from './constants';
 
@@ -25,13 +24,12 @@ function WeightedVote({ signer }) {
             WEIGHTED_VOTE_ABI,
             signer
         );
-        const tok = new ethers.Contract(
-            WEIGHTED_VOTE_TOKEN_ADDRESS,
-            ERC20_ABI,
-            signer
-        );
         setContract(vote);
-        setToken(tok);
+        (async () => {
+            const tokenAddr = await vote.token();
+            const tok = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+            setToken(tok);
+        })();
     }, [signer]);
 
     // 投票状況を取得

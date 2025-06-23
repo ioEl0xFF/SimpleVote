@@ -35,18 +35,14 @@ async function main() {
     console.log('WeightedVote deployed to:', weighted.target);
     console.log('VoteToken deployed to:', token.target);
 
-    // フロントエンドの WeightedVote アドレスとトークンアドレスを書き換え
+    // フロントエンドの WeightedVote アドレスを書き換え
     data = fs.readFileSync(constantsPath, 'utf8');
     data = data.replace(
         /export const WEIGHTED_VOTE_ADDRESS = '0x[0-9a-fA-F]+';/,
         `export const WEIGHTED_VOTE_ADDRESS = '${weighted.target}';`
     );
-    data = data.replace(
-        /export const WEIGHTED_VOTE_TOKEN_ADDRESS = '0x[0-9a-fA-F]+';/,
-        `export const WEIGHTED_VOTE_TOKEN_ADDRESS = '${token.target}';`
-    );
     fs.writeFileSync(constantsPath, data);
-    console.log('Updated WEIGHTED_VOTE_ADDRESS and token in constants.js');
+    console.log('Updated WEIGHTED_VOTE_ADDRESS in constants.js');
 }
 
 main().catch((error) => {
