@@ -11,6 +11,8 @@ function App() {
     const [selected, setSelected] = useState(null);
     const [votedId, setVotedId] = useState(0);
     const [txPending, setTxPending] = useState(false);
+    const [start, setStart] = useState(0);
+    const [end, setEnd] = useState(0);
 
     /** ① MetaMask へ接続 */
     const connectWallet = async () => {
@@ -34,6 +36,8 @@ function App() {
     const fetchData = useCallback(async () => {
         if (!contract) return;
         setTopic(await contract.topic());
+        setStart(Number(await contract.startTime()));
+        setEnd(Number(await contract.endTime()));
         const count = await contract.choiceCount();
         const arr = [];
         for (let i = 1n; i <= count; i++) {
@@ -112,6 +116,12 @@ function App() {
             ) : (
                 <>
                     <p className="text-lg">議題: {topic}</p>
+                    <p>
+                        開始: {start ? new Date(start * 1000).toLocaleString() : '-'}
+                    </p>
+                    <p>
+                        終了: {end ? new Date(end * 1000).toLocaleString() : '-'}
+                    </p>
 
                     <form
                         className="flex flex-col gap-2"
