@@ -1,0 +1,170 @@
+import { useEffect, useState, useCallback } from 'react';
+import { ethers } from 'ethers';
+import {
+    WEIGHTED_VOTE_ABI,
+    WEIGHTED_VOTE_ADDRESS,
+    WEIGHTED_VOTE_TOKEN_ADDRESS,
+    ERC20_ABI,
+} from './constants';
+
+function WeightedVote({ signer }) {
+    const [contract, setContract] = useState(null);
+    const [token, setToken] = useState(null);
+    const [topic, setTopic] = useState('');
+    const [choices, setChoices] = useState([]);
+    const [selected, setSelected] = useState(null);
+    const [amount, setAmount] = useState('');
+    const [votedId, setVotedId] = useState(0);
+    const [txPending, setTxPending] = useState(false);
+
+    // signer が変わったらコントラクトを初期化
+    useEffect(() => {
+        if (!signer) return;
+        const vote = new ethers.Contract(
+            WEIGHTED_VOTE_ADDRESS,
+            WEIGHTED_VOTE_ABI,
+            signer
+        );
+        const tok = new ethers.Contract(
+            WEIGHTED_VOTE_TOKEN_ADDRESS,
+            ERC20_ABI,
+            signer
+        );
+        setContract(vote);
+        setToken(tok);
+    }, [signer]);
+
+    // 投票状況を取得
+    const fetchData = useCallback(async () => {
+        if (!contract) return;
+        setTopic(await contract.topic());
+        const count = await contract.choiceCount();
+        const arr = [];
+        for (let i = 1n; i <= count; i++) {
+            const name = await contract.choice(i);
+            const votes = await contract.voteCount(i);
+            arr.push({ id: Number(i), name, votes });
+        }
+        setChoices(arr);
+        if (signer) {
+            const addr = await signer.getAddress();
+            const id = await contract.votedChoiceId(addr);
+            setVotedId(Number(id));
+        }
+    }, [contract, signer]);
+
+    // 初期化とイベント購読
+    useEffect(() => {
+        if (!contract) return;
+        fetchData();
+        contract.on('VoteCast', fetchData);
+        contract.on('VoteCancelled', fetchData);
+        return () => {
+            contract.off('VoteCast', fetchData);
+            contract.off('VoteCancelled', fetchData);
+        };
+    }, [contract, fetchData]);
+
+    // トークンの承認
+    const approve = async () => {
+        if (!token || !amount) return;
+        const value = ethers.parseEther(amount);
+        const tx = await token.approve(WEIGHTED_VOTE_ADDRESS, value);
+        await tx.wait();
+    };
+
+    // 投票処理
+    const vote = async () => {
+        if (!contract || selected === null || !amount) return;
+        try {
+            setTxPending(true);
+            const value = ethers.parseEther(amount);
+            const tx = await contract.vote(selected, value);
+            await tx.wait();
+            await fetchData();
+        } finally {
+            setTxPending(false);
+        }
+    };
+
+    // 投票取消
+    const cancelVote = async () => {
+        if (!contract) return;
+        try {
+            setTxPending(true);
+            const tx = await contract.cancelVote();
+            await tx.wait();
+            await fetchData();
+        } finally {
+            setTxPending(false);
+        }
+    };
+
+    return (
+        <section className="flex flex-col items-center gap-4 mt-10">
+            <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
+            <p className="text-lg">議題: {topic}</p>
+            <form
+                className="flex flex-col gap-2"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    vote();
+                }}
+            >
+                {choices.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="weightedChoice"
+                            value={c.id}
+                            onChange={() => setSelected(c.id)}
+                            checked={selected === c.id}
+                            disabled={votedId !== 0}
+                        />
+                        {c.name} ({c.votes.toString()})
+                    </label>
+                ))}
+                <input
+                    type="number"
+                    min="0"
+                    placeholder="トークン量"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="border px-2 py-1 rounded"
+                    disabled={votedId !== 0}
+                />
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-green-500 text-white disabled:opacity-50"
+                    onClick={approve}
+                    disabled={!amount || selected === null || votedId !== 0}
+                >
+                    Approve
+                </button>
+                <button
+                    className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
+                    disabled={
+                        txPending ||
+                        selected === null ||
+                        !amount ||
+                        votedId !== 0
+                    }
+                >
+                    投票する
+                </button>
+            </form>
+            {votedId !== 0 && (
+                <button
+                    className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
+                    disabled={txPending}
+                    onClick={cancelVote}
+                >
+                    取消
+                </button>
+            )}
+            {txPending && <p>トランザクション承認待ち…</p>}
+        </section>
+    );
+}
+
+export default WeightedVote;
