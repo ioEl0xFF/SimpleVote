@@ -19,6 +19,11 @@ function WeightedVote({ signer }) {
     // signer が変わったらコントラクトを初期化
     useEffect(() => {
         if (!signer) return;
+        // アドレスが 0 の場合はコントラクトが未配置とみなす
+        if (WEIGHTED_VOTE_ADDRESS === '0x0000000000000000000000000000000000000000') {
+            console.warn('WeightedVote コントラクトアドレスが未設定です');
+            return;
+        }
         const vote = new ethers.Contract(
             WEIGHTED_VOTE_ADDRESS,
             WEIGHTED_VOTE_ABI,
@@ -111,6 +116,16 @@ function WeightedVote({ signer }) {
             setTxPending(false);
         }
     };
+
+    // コントラクトが未設定なら簡易メッセージを表示
+    if (WEIGHTED_VOTE_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        return (
+            <section className="flex flex-col items-center gap-4 mt-10">
+                <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
+                <p>コントラクトがデプロイされていません</p>
+            </section>
+        );
+    }
 
     return (
         <section className="flex flex-col items-center gap-4 mt-10">
