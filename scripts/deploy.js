@@ -31,7 +31,9 @@ async function main() {
     await token.mint(deployer.address, hre.ethers.parseEther('1000'));
 
     const Weighted = await hre.ethers.getContractFactory('WeightedVote');
-    const weighted = await Weighted.deploy('Best color', token.target);
+    const weightedStart = start + 7200;
+    const weightedEnd = weightedStart + 3600;
+    const weighted = await Weighted.deploy('Best color', token.target, weightedStart, weightedEnd);
     await weighted.waitForDeployment();
     await weighted.addChoice('Red');
     await weighted.addChoice('Blue');

@@ -121,6 +121,8 @@ export const WEIGHTED_VOTE_ABI = [
         inputs: [
             { internalType: 'string', name: '_topic', type: 'string' },
             { internalType: 'address', name: '_token', type: 'address' },
+            { internalType: 'uint256', name: '_startTime', type: 'uint256' },
+            { internalType: 'uint256', name: '_endTime', type: 'uint256' },
         ],
         stateMutability: 'nonpayable',
         type: 'constructor',
@@ -223,6 +225,20 @@ export const WEIGHTED_VOTE_ABI = [
     {
         inputs: [{ internalType: 'address', name: '', type: 'address' }],
         name: 'deposited',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'startTime',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'endTime',
         outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
         stateMutability: 'view',
         type: 'function',
