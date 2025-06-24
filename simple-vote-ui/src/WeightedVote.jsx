@@ -82,9 +82,13 @@ function WeightedVote({ signer, showToast }) {
         if (!token || !amount) return;
         const value = ethers.parseEther(amount);
         showToast('トランザクション承認待ち…');
-        const tx = await token.approve(WEIGHTED_VOTE_ADDRESS, value);
-        await tx.wait();
-        showToast('承認が完了しました');
+        try {
+            const tx = await token.approve(WEIGHTED_VOTE_ADDRESS, value);
+            await tx.wait();
+            showToast('承認が完了しました');
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
+        }
     };
 
     // 投票処理
@@ -98,6 +102,8 @@ function WeightedVote({ signer, showToast }) {
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
         }
@@ -113,6 +119,8 @@ function WeightedVote({ signer, showToast }) {
             await tx.wait();
             await fetchData();
             showToast('投票を取り消しました');
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
         }

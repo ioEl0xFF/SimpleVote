@@ -33,37 +33,42 @@ function App() {
             alert('MetaMask をインストールしてください');
             return;
         }
-        const _provider = new ethers.BrowserProvider(window.ethereum);
-        await _provider.send('eth_requestAccounts', []);
-        const _signer = await _provider.getSigner();
-        const _contract = new ethers.Contract(
-            DYNAMIC_VOTE_ADDRESS,
-            DYNAMIC_VOTE_ABI,
-            _signer
-        );
-        setSigner(_signer);
-        setContract(_contract);
-        showToast('ウォレット接続完了');
+        try {
+            const _provider = new ethers.BrowserProvider(window.ethereum);
+            await _provider.send('eth_requestAccounts', []);
+            const _signer = await _provider.getSigner();
+            const _contract = new ethers.Contract(
+                DYNAMIC_VOTE_ADDRESS,
+                DYNAMIC_VOTE_ABI,
+                _signer
+            );
+            setSigner(_signer);
+            setContract(_contract);
+            showToast('ウォレット接続完了');
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
+        }
     };
 
     /** ② 票と選択肢を取得 */
     const fetchData = useCallback(async () => {
         if (!contract) return;
-        setTopic(await contract.topic());
-        setStart(Number(await contract.startTime()));
-        setEnd(Number(await contract.endTime()));
-        const count = await contract.choiceCount();
-        const arr = [];
-        for (let i = 1n; i <= count; i++) {
-            const name = await contract.choice(i);
-            const votes = await contract.voteCount(i);
-            arr.push({ id: Number(i), name, votes });
-        }
-        setChoices(arr);
-        if (signer) {
-            const addr = await signer.getAddress();
-            const id = await contract.votedChoiceId(addr);
-            setVotedId(Number(id));
+        try {
+            setTopic(await contract.topic());
+            setStart(Number(await contract.startTime()));
+            setEnd(Number(await contract.endTime()));
+            const count = await contract.choiceCount();
+            const arr = [];
+            for (let i = 1n; i <= count; i++) {
+                const name = await contract.choice(i);
+                const votes = await contract.voteCount(i);
+                arr.push({ id: Number(i), name, votes });
+            }
+            setChoices(arr);
+            if (signer) {
+                const addr = await signer.getAddress();
+                const id = await contract.votedChoiceId(addr);
+                setVotedId(Number(id));
 
             // 投票状態をコンソールログに出力
             console.log('=== 投票状態 ===');
@@ -77,7 +82,10 @@ function App() {
             console.log('選択肢一覧:', arr);
             console.log('================');
         }
-    }, [contract, signer]);
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
+        }
+    }, [contract, signer, showToast]);
 
     /** ③ 投票トランザクション */
     const vote = async (choiceId) => {
@@ -89,6 +97,8 @@ function App() {
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
         }
@@ -103,6 +113,8 @@ function App() {
             await tx.wait();
             await fetchData();
             showToast('投票を取り消しました');
+        } catch (err) {
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
         }
