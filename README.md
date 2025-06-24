@@ -44,7 +44,7 @@ npm test
 ネットワーク情報は `hardhat.config.js` の `networks` セクションで指定します。 `.env` に設定したアカウントでデプロイを実行します。
 
 ```bash
-npm run deploy
+npx hardhat run scripts/deploy.js --network amoy
 ```
 
 ## フロントエンドの起動
