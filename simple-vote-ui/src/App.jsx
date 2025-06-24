@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { DYNAMIC_VOTE_ABI, DYNAMIC_VOTE_ADDRESS } from './constants';
 import WeightedVote from './WeightedVote.jsx';
+import Toast from './Toast.jsx';
 
 function App() {
     const [signer, setSigner] = useState(null);
@@ -13,6 +14,18 @@ function App() {
     const [txPending, setTxPending] = useState(false);
     const [start, setStart] = useState(0);
     const [end, setEnd] = useState(0);
+    const [toasts, setToasts] = useState([]);
+
+    // トーストを追加するユーティリティ関数
+    const showToast = useCallback((msg) => {
+        const id = Date.now();
+        setToasts((prev) => [...prev, { id, msg }]);
+    }, []);
+
+    // 指定 ID のトーストを除去
+    const removeToast = useCallback((id) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, []);
 
     /** ① MetaMask へ接続 */
     const connectWallet = async () => {
@@ -30,6 +43,7 @@ function App() {
         );
         setSigner(_signer);
         setContract(_contract);
+        showToast('ウォレット接続完了');
     };
 
     /** ② 票と選択肢を取得 */
@@ -70,9 +84,11 @@ function App() {
         if (!contract) return;
         try {
             setTxPending(true);
+            showToast('トランザクション承認待ち…');
             const tx = await contract.vote(choiceId);
             await tx.wait();
             await fetchData();
+            showToast('投票が完了しました');
         } finally {
             setTxPending(false);
         }
@@ -82,9 +98,11 @@ function App() {
         if (!contract) return;
         try {
             setTxPending(true);
+            showToast('トランザクション承認待ち…');
             const tx = await contract.cancelVote();
             await tx.wait();
             await fetchData();
+            showToast('投票を取り消しました');
         } finally {
             setTxPending(false);
         }
@@ -161,10 +179,14 @@ function App() {
                         </button>
                     )}
 
-                    {txPending && <p>トランザクション承認待ち…</p>}
                 </>
             )}
-            {signer && <WeightedVote signer={signer} />}
+            {signer && <WeightedVote signer={signer} showToast={showToast} />}
+            <div className="toast-container">
+                {toasts.map((t) => (
+                    <Toast key={t.id} message={t.msg} onClose={() => removeToast(t.id)} />
+                ))}
+            </div>
         </main>
     );
 }

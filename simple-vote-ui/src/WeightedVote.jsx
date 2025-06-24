@@ -6,7 +6,7 @@ import {
     ERC20_ABI,
 } from './constants';
 
-function WeightedVote({ signer }) {
+function WeightedVote({ signer, showToast }) {
     const [contract, setContract] = useState(null);
     const [token, setToken] = useState(null);
     const [topic, setTopic] = useState('');
@@ -81,8 +81,10 @@ function WeightedVote({ signer }) {
     const approve = async () => {
         if (!token || !amount) return;
         const value = ethers.parseEther(amount);
+        showToast('トランザクション承認待ち…');
         const tx = await token.approve(WEIGHTED_VOTE_ADDRESS, value);
         await tx.wait();
+        showToast('承認が完了しました');
     };
 
     // 投票処理
@@ -90,10 +92,12 @@ function WeightedVote({ signer }) {
         if (!contract || selected === null || !amount) return;
         try {
             setTxPending(true);
+            showToast('トランザクション承認待ち…');
             const value = ethers.parseEther(amount);
             const tx = await contract.vote(selected, value);
             await tx.wait();
             await fetchData();
+            showToast('投票が完了しました');
         } finally {
             setTxPending(false);
         }
@@ -104,9 +108,11 @@ function WeightedVote({ signer }) {
         if (!contract) return;
         try {
             setTxPending(true);
+            showToast('トランザクション承認待ち…');
             const tx = await contract.cancelVote();
             await tx.wait();
             await fetchData();
+            showToast('投票を取り消しました');
         } finally {
             setTxPending(false);
         }
@@ -174,7 +180,6 @@ function WeightedVote({ signer }) {
                     取消
                 </button>
             )}
-            {txPending && <p>トランザクション承認待ち…</p>}
         </section>
     );
 }
