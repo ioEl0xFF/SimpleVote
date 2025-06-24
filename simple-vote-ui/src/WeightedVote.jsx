@@ -42,15 +42,23 @@ function WeightedVote({ signer, showToast }) {
         if (!contract) return;
         setTopic(await contract.topic());
         const count = await contract.choiceCount();
-        const arr = [];
+
+        // 各選択肢の取得を並列で実行し、読み込み時間を短縮
+        const promises = [];
         for (let i = 1n; i <= count; i++) {
-            const name = await contract.choice(i);
-            const votes = await contract.voteCount(i);
-            // トークンの票数は 18 桁の精度を持つので、Ether 表記へ変換
-            const formatted = ethers.formatEther(votes);
-            arr.push({ id: Number(i), name, votes: formatted });
+            promises.push(
+                Promise.all([contract.choice(i), contract.voteCount(i)]).then(
+                    ([name, votes]) => ({
+                        id: Number(i),
+                        name,
+                        votes: ethers.formatEther(votes), // 18 桁精度を Ether 表記に変換
+                    }),
+                ),
+            );
         }
+        const arr = await Promise.all(promises);
         setChoices(arr);
+
         if (signer) {
             const addr = await signer.getAddress();
             const id = await contract.votedChoiceId(addr);
