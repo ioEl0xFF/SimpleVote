@@ -37,11 +37,20 @@ function App() {
             const _provider = new ethers.BrowserProvider(window.ethereum);
             await _provider.send('eth_requestAccounts', []);
             const _signer = await _provider.getSigner();
+
+            // ネットワーク上にコントラクトが存在するか確認
+            const code = await _provider.getCode(DYNAMIC_VOTE_ADDRESS);
+            if (code === '0x') {
+                showToast('指定のネットワークに DynamicVote がデプロイされていません');
+                return;
+            }
+
             const _contract = new ethers.Contract(
                 DYNAMIC_VOTE_ADDRESS,
                 DYNAMIC_VOTE_ABI,
-                _signer
+                _signer,
             );
+
             setSigner(_signer);
             setContract(_contract);
             showToast('ウォレット接続完了');

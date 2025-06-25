@@ -18,19 +18,32 @@ function WeightedVote({ signer, showToast }) {
 
     // signer が変わったらコントラクトを初期化
     useEffect(() => {
-        if (!signer) return;
-        // アドレスが 0 の場合はコントラクトが未配置とみなす
-        if (WEIGHTED_VOTE_ADDRESS === '0x0000000000000000000000000000000000000000') {
-            console.warn('WeightedVote コントラクトアドレスが未設定です');
-            return;
-        }
-        const vote = new ethers.Contract(
-            WEIGHTED_VOTE_ADDRESS,
-            WEIGHTED_VOTE_ABI,
-            signer
-        );
-        setContract(vote);
         (async () => {
+            if (!signer) return;
+
+            // コントラクトアドレスが設定されているか確認
+            if (
+                WEIGHTED_VOTE_ADDRESS ===
+                '0x0000000000000000000000000000000000000000'
+            ) {
+                console.warn('WeightedVote コントラクトアドレスが未設定です');
+                return;
+            }
+
+            // 現在のネットワークにデプロイされているか確認
+            const code = await signer.provider.getCode(WEIGHTED_VOTE_ADDRESS);
+            if (code === '0x') {
+                console.warn('WeightedVote コントラクトが見つかりません');
+                return;
+            }
+
+            const vote = new ethers.Contract(
+                WEIGHTED_VOTE_ADDRESS,
+                WEIGHTED_VOTE_ABI,
+                signer,
+            );
+            setContract(vote);
+
             const tokenAddr = await vote.token();
             const tok = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
             setToken(tok);
