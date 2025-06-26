@@ -29,6 +29,15 @@ contract WeightedVote is Ownable {
     /// 選択肢の総数（最大 10）
     uint256 public choiceCount;
 
+    /// 投票期間中のみ実行可能な修飾子
+    modifier onlyDuringVoting() {
+        require(
+            block.timestamp >= startTime && block.timestamp <= endTime,
+            "Voting closed"
+        );
+        _;
+    }
+
     event ChoiceAdded(uint256 id, string name);
     event VoteCast(address voter, uint256 choiceId, uint256 amount);
     event VoteCancelled(address indexed voter, uint256 choiceId, uint256 amount);
@@ -66,11 +75,7 @@ contract WeightedVote is Ownable {
      * @param choiceId 1 から choiceCount までの選択肢 ID
      * @param amount 預けるトークン量（そのまま票数となります）
      */
-    function vote(uint256 choiceId, uint256 amount) external {
-        require(
-            block.timestamp >= startTime && block.timestamp <= endTime,
-            "Voting closed"
-        );
+    function vote(uint256 choiceId, uint256 amount) external onlyDuringVoting {
         require(votedChoiceId[msg.sender] == 0, "Already voted. Cancel first");
         require(choiceId > 0 && choiceId <= choiceCount, "invalid id");
         require(amount > 0, "amount zero");
@@ -83,11 +88,7 @@ contract WeightedVote is Ownable {
     }
 
     /// @notice 投票を取り消し、預けたトークンを返却します
-    function cancelVote() external {
-        require(
-            block.timestamp >= startTime && block.timestamp <= endTime,
-            "Voting closed"
-        );
+    function cancelVote() external onlyDuringVoting {
         uint256 prev = votedChoiceId[msg.sender];
         require(prev != 0, "No vote to cancel");
         uint256 amount = deposited[msg.sender];
