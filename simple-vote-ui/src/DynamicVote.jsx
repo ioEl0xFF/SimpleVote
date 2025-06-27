@@ -5,7 +5,7 @@ import { DYNAMIC_VOTE_ABI } from './constants';
 const ZERO = '0x0000000000000000000000000000000000000000';
 
 // DynamicVote コントラクトを操作する汎用コンポーネント
-function DynamicVote({ signer, address, showToast }) {
+function DynamicVote({ signer, address, showToast, onBack }) {
     const [contract, setContract] = useState(null);
     const [topic, setTopic] = useState('');
     const [choices, setChoices] = useState([]);
@@ -146,6 +146,15 @@ function DynamicVote({ signer, address, showToast }) {
                 </button>
             )}
             {!inPeriod && <p className="text-red-600">投票期間外です</p>}
+            {onBack && (
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-gray-400 text-white"
+                    onClick={onBack}
+                >
+                    戻る
+                </button>
+            )}
         </section>
     );
 }

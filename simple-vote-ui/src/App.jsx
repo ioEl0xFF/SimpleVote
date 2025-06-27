@@ -66,6 +66,7 @@ function App() {
                     signer={signer}
                     address={selected.addr}
                     showToast={showToast}
+                    onBack={() => setPage('list')}
                 />
             );
         }
@@ -75,6 +76,7 @@ function App() {
                     signer={signer}
                     address={selected.addr}
                     showToast={showToast}
+                    onBack={() => setPage('list')}
                 />
             );
         }

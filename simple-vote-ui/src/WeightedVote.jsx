@@ -8,7 +8,7 @@ import {
 // WeightedVote コントラクト用の汎用コンポーネント
 
 // 指定アドレスの WeightedVote を操作
-function WeightedVote({ signer, address, showToast }) {
+function WeightedVote({ signer, address, showToast, onBack }) {
     const [contract, setContract] = useState(null);
     const [token, setToken] = useState(null);
     const [topic, setTopic] = useState('');
@@ -206,6 +206,15 @@ function WeightedVote({ signer, address, showToast }) {
                 </button>
             )}
             {!inPeriod && <p className="text-red-600">投票期間外です</p>}
+            {onBack && (
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-gray-400 text-white"
+                    onClick={onBack}
+                >
+                    戻る
+                </button>
+            )}
         </section>
     );
 }
