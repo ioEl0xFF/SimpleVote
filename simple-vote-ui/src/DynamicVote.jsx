@@ -26,7 +26,6 @@ function DynamicVote({ signer, address, showToast }) {
         setTopic(await contract.topic());
         const s = Number(await contract.startTime());
         const e = Number(await contract.endTime());
-        console.log('start', s, 'end', e);
         setStart(s);
         setEnd(e);
         const count = await contract.choiceCount();
@@ -60,13 +59,11 @@ function DynamicVote({ signer, address, showToast }) {
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            console.log('vote parameters', { choiceId: selected });
             const tx = await contract.vote(selected);
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
         } catch (err) {
-            console.error('vote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
@@ -83,7 +80,6 @@ function DynamicVote({ signer, address, showToast }) {
             await fetchData();
             showToast('投票を取り消しました');
         } catch (err) {
-            console.error('cancelVote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
