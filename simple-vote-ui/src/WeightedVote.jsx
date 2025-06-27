@@ -8,7 +8,7 @@ import {
 // WeightedVote コントラクト用の汎用コンポーネント
 
 // 指定アドレスの WeightedVote を操作
-function WeightedVote({ signer, address, showToast }) {
+function WeightedVote({ signer, address, showToast, onBack }) {
     const [contract, setContract] = useState(null);
     const [token, setToken] = useState(null);
     const [topic, setTopic] = useState('');
@@ -38,7 +38,6 @@ function WeightedVote({ signer, address, showToast }) {
         setTopic(await contract.topic());
         const s = Number(await contract.startTime());
         const e = Number(await contract.endTime());
-        console.log('start', s, 'end', e);
         setStart(s);
         setEnd(e);
         const count = await contract.choiceCount();
@@ -88,7 +87,6 @@ function WeightedVote({ signer, address, showToast }) {
             await tx.wait();
             showToast('承認が完了しました');
         } catch (err) {
-            console.error('approve error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         }
     };
@@ -100,13 +98,11 @@ function WeightedVote({ signer, address, showToast }) {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             const value = ethers.parseEther(amount);
-            console.log('vote parameters', { choiceId: selected, amount: value.toString() });
             const tx = await contract.vote(selected, value);
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
         } catch (err) {
-            console.error('vote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
@@ -124,7 +120,6 @@ function WeightedVote({ signer, address, showToast }) {
             await fetchData();
             showToast('投票を取り消しました');
         } catch (err) {
-            console.error('cancelVote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
@@ -211,6 +206,15 @@ function WeightedVote({ signer, address, showToast }) {
                 </button>
             )}
             {!inPeriod && <p className="text-red-600">投票期間外です</p>}
+            {onBack && (
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-gray-400 text-white"
+                    onClick={onBack}
+                >
+                    戻る
+                </button>
+            )}
         </section>
     );
 }

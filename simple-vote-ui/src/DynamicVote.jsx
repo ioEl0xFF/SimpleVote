@@ -5,7 +5,7 @@ import { DYNAMIC_VOTE_ABI } from './constants';
 const ZERO = '0x0000000000000000000000000000000000000000';
 
 // DynamicVote コントラクトを操作する汎用コンポーネント
-function DynamicVote({ signer, address, showToast }) {
+function DynamicVote({ signer, address, showToast, onBack }) {
     const [contract, setContract] = useState(null);
     const [topic, setTopic] = useState('');
     const [choices, setChoices] = useState([]);
@@ -26,7 +26,6 @@ function DynamicVote({ signer, address, showToast }) {
         setTopic(await contract.topic());
         const s = Number(await contract.startTime());
         const e = Number(await contract.endTime());
-        console.log('start', s, 'end', e);
         setStart(s);
         setEnd(e);
         const count = await contract.choiceCount();
@@ -60,13 +59,11 @@ function DynamicVote({ signer, address, showToast }) {
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            console.log('vote parameters', { choiceId: selected });
             const tx = await contract.vote(selected);
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
         } catch (err) {
-            console.error('vote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
@@ -83,7 +80,6 @@ function DynamicVote({ signer, address, showToast }) {
             await fetchData();
             showToast('投票を取り消しました');
         } catch (err) {
-            console.error('cancelVote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
@@ -150,6 +146,15 @@ function DynamicVote({ signer, address, showToast }) {
                 </button>
             )}
             {!inPeriod && <p className="text-red-600">投票期間外です</p>}
+            {onBack && (
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-gray-400 text-white"
+                    onClick={onBack}
+                >
+                    戻る
+                </button>
+            )}
         </section>
     );
 }

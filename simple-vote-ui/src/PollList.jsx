@@ -17,7 +17,6 @@ function PollList({ signer, onSelect }) {
     useEffect(() => {
         if (!signer) return;
         if (POLL_MANAGER_ADDRESS === ZERO) {
-            console.warn('POLL_MANAGER_ADDRESS が未設定です');
             return;
         }
         const m = new ethers.Contract(
@@ -45,8 +44,8 @@ function PollList({ signer, onSelect }) {
                     }
                 }
                 setPolls(list);
-            } catch (err) {
-                console.error('fetch polls error', err);
+            } catch {
+                // 読み込みに失敗してもエラーは表示しない
             }
         };
         fetch();
