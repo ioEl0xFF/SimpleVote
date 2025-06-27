@@ -98,6 +98,10 @@ function DynamicVote({ signer, address, showToast }) {
         );
     }
 
+    // 現在が投票期間内かどうかを判定
+    const now = Math.floor(Date.now() / 1000);
+    const inPeriod = start !== 0 && now >= start && now <= end;
+
     return (
         <section className="flex flex-col items-center gap-4 mt-10">
             <h2 className="text-2xl font-bold">DynamicVote</h2>
@@ -126,7 +130,12 @@ function DynamicVote({ signer, address, showToast }) {
                 ))}
                 <button
                     className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
-                    disabled={txPending || selected === null || votedId !== 0}
+                    disabled={
+                        txPending ||
+                        selected === null ||
+                        votedId !== 0 ||
+                        !inPeriod
+                    }
                 >
                     投票する
                 </button>
@@ -134,12 +143,13 @@ function DynamicVote({ signer, address, showToast }) {
             {votedId !== 0 && (
                 <button
                     className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
-                    disabled={txPending}
+                    disabled={txPending || !inPeriod}
                     onClick={cancelVote}
                 >
                     取消
                 </button>
             )}
+            {!inPeriod && <p className="text-red-600">投票期間外です</p>}
         </section>
     );
 }

@@ -141,6 +141,10 @@ function WeightedVote({ signer, address, showToast }) {
         );
     }
 
+    // 現在が投票期間内かどうか
+    const now = Math.floor(Date.now() / 1000);
+    const inPeriod = start !== 0 && now >= start && now <= end;
+
     return (
         <section className="flex flex-col items-center gap-4 mt-10">
             <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
@@ -190,7 +194,8 @@ function WeightedVote({ signer, address, showToast }) {
                         txPending ||
                         selected === null ||
                         !amount ||
-                        votedId !== 0
+                        votedId !== 0 ||
+                        !inPeriod
                     }
                 >
                     投票する
@@ -199,12 +204,13 @@ function WeightedVote({ signer, address, showToast }) {
             {votedId !== 0 && (
                 <button
                     className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
-                    disabled={txPending}
+                    disabled={txPending || !inPeriod}
                     onClick={cancelVote}
                 >
                     取消
                 </button>
             )}
+            {!inPeriod && <p className="text-red-600">投票期間外です</p>}
         </section>
     );
 }
