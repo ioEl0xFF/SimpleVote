@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import Toast from './Toast.jsx';
-import PollList from './PollList.jsx';
+import PollListPage from './PollListPage.jsx';
+import PollCreate from './PollCreate.jsx';
 import DynamicVote from './DynamicVote.jsx';
 import WeightedVote from './WeightedVote.jsx';
 
 function App() {
     const [signer, setSigner] = useState(null);
+    const [account, setAccount] = useState('');
+    const [page, setPage] = useState('list');
     const [selected, setSelected] = useState(null);
     const [toasts, setToasts] = useState([]);
 
@@ -20,7 +23,7 @@ function App() {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
 
-    // ウォレット接続処理
+    // メタマスクへ接続し署名を行う
     const connectWallet = async () => {
         if (!window.ethereum) {
             alert('MetaMask をインストールしてください');
@@ -30,11 +33,61 @@ function App() {
             const provider = new ethers.BrowserProvider(window.ethereum);
             await provider.send('eth_requestAccounts', []);
             const _signer = await provider.getSigner();
+            const addr = await _signer.getAddress();
+            await _signer.signMessage('SimpleVote login');
             setSigner(_signer);
-            showToast('ウォレット接続完了');
+            setAccount(addr);
+            showToast('認証が完了しました');
         } catch (err) {
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         }
+    };
+
+    const signOut = () => {
+        setSigner(null);
+        setAccount('');
+        setSelected(null);
+        setPage('list');
+    };
+
+    const renderContent = () => {
+        if (page === 'create') {
+            return (
+                <PollCreate
+                    signer={signer}
+                    onCreated={() => setPage('list')}
+                    showToast={showToast}
+                />
+            );
+        }
+        if (page === 'dynamic' && selected) {
+            return (
+                <DynamicVote
+                    signer={signer}
+                    address={selected.addr}
+                    showToast={showToast}
+                />
+            );
+        }
+        if (page === 'weighted' && selected) {
+            return (
+                <WeightedVote
+                    signer={signer}
+                    address={selected.addr}
+                    showToast={showToast}
+                />
+            );
+        }
+        return (
+            <PollListPage
+                signer={signer}
+                onSelect={(p) => {
+                    setSelected(p);
+                    setPage(p.type);
+                }}
+                onCreate={() => setPage('create')}
+            />
+        );
     };
 
     return (
@@ -49,21 +102,16 @@ function App() {
                 </button>
             ) : (
                 <>
-                    <PollList signer={signer} onSelect={setSelected} />
-                    {selected && selected.type === 'dynamic' && (
-                        <DynamicVote
-                            signer={signer}
-                            address={selected.addr}
-                            showToast={showToast}
-                        />
-                    )}
-                    {selected && selected.type === 'weighted' && (
-                        <WeightedVote
-                            signer={signer}
-                            address={selected.addr}
-                            showToast={showToast}
-                        />
-                    )}
+                    <div className="flex items-center gap-4">
+                        <p className="font-mono">{account}</p>
+                        <button
+                            className="px-4 py-1 rounded-xl bg-gray-400 text-white"
+                            onClick={signOut}
+                        >
+                            切断
+                        </button>
+                    </div>
+                    {renderContent()}
                 </>
             )}
             <div className="toast-container">
