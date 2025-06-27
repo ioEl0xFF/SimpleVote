@@ -15,6 +15,8 @@ function WeightedVote({ signer, showToast }) {
     const [amount, setAmount] = useState('');
     const [votedId, setVotedId] = useState(0);
     const [txPending, setTxPending] = useState(false);
+    const [start, setStart] = useState(0);
+    const [end, setEnd] = useState(0);
 
     // signer が変わったらコントラクトを初期化
     useEffect(() => {
@@ -41,6 +43,8 @@ function WeightedVote({ signer, showToast }) {
     const fetchData = useCallback(async () => {
         if (!contract) return;
         setTopic(await contract.topic());
+        setStart(Number(await contract.startTime()));
+        setEnd(Number(await contract.endTime()));
         const count = await contract.choiceCount();
 
         // 各選択肢の取得を並列で実行し、読み込み時間を短縮
@@ -153,6 +157,8 @@ function WeightedVote({ signer, showToast }) {
         <section className="flex flex-col items-center gap-4 mt-10">
             <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
             <p className="text-lg">議題: {topic}</p>
+            <p>開始: {start ? new Date(start * 1000).toLocaleString() : '-'}</p>
+            <p>終了: {end ? new Date(end * 1000).toLocaleString() : '-'}</p>
             <form
                 className="flex flex-col gap-2"
                 onSubmit={(e) => {
