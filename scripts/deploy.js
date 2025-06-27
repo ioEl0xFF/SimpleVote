@@ -13,11 +13,15 @@ async function main() {
 
     // フロントエンドのアドレス書き換え設定
     const constantsPath = path.join(__dirname, '..', 'simple-vote-ui', 'src', 'constants.js');
+
+    // ファイルを読み込み後でアドレスを書き換える関数
+    const updateConstant = (content, key, value) => {
+        const regex = new RegExp(`export const ${key} = '0x[0-9a-fA-F]+';`);
+        return content.replace(regex, `export const ${key} = '${value}';`);
+    };
+
     let data = fs.readFileSync(constantsPath, 'utf8');
-    data = data.replace(
-        /export const POLL_MANAGER_ADDRESS = '0x[0-9a-fA-F]+';/,
-        `export const POLL_MANAGER_ADDRESS = '${manager.target}';`
-    );
+    data = updateConstant(data, 'POLL_MANAGER_ADDRESS', manager.target);
     fs.writeFileSync(constantsPath, data);
     console.log('Updated POLL_MANAGER_ADDRESS in constants.js');
 
@@ -57,14 +61,8 @@ async function main() {
 
     // 生成したアドレスをフロントエンドに反映
     data = fs.readFileSync(constantsPath, 'utf8');
-    data = data.replace(
-        /export const DYNAMIC_VOTE_ADDRESS = '0x[0-9a-fA-F]+';/,
-        `export const DYNAMIC_VOTE_ADDRESS = '${dynamic.target}';`
-    );
-    data = data.replace(
-        /export const WEIGHTED_VOTE_ADDRESS = '0x[0-9a-fA-F]+';/,
-        `export const WEIGHTED_VOTE_ADDRESS = '${weighted.target}';`
-    );
+    data = updateConstant(data, 'DYNAMIC_VOTE_ADDRESS', dynamic.target);
+    data = updateConstant(data, 'WEIGHTED_VOTE_ADDRESS', weighted.target);
     fs.writeFileSync(constantsPath, data);
     console.log('Updated vote addresses in constants.js');
 

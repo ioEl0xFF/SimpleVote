@@ -42,7 +42,10 @@ npm test
 
 ## コントラクトデプロイ
 
-ネットワーク情報は `hardhat.config.js` の `networks` セクションで指定します。 `.env` に設定したアカウントでデプロイを実行します。
+`scripts/deploy.js` を実行すると PollManager とサンプル投票(DynamicVote、WeightedVote) がデプロイされ、
+`simple-vote-ui/src/constants.js` のアドレス定数が自動更新されます。
+
+ネットワークは `hardhat.config.js` の `networks` から選択し、`.env` に指定したアカウントで実行してください。
 
 ```bash
 npx hardhat run scripts/deploy.js --network amoy
