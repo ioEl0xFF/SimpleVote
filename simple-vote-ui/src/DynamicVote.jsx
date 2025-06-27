@@ -1,79 +1,46 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
-import {
-    WEIGHTED_VOTE_ABI,
-    ERC20_ABI,
-} from './constants';
+import { DYNAMIC_VOTE_ABI } from './constants';
 
-// 指定アドレスの WeightedVote を操作
-function WeightedVote({ signer, address, showToast }) {
+const ZERO = '0x0000000000000000000000000000000000000000';
+
+// DynamicVote コントラクトを操作する汎用コンポーネント
+function DynamicVote({ signer, address, showToast }) {
     const [contract, setContract] = useState(null);
-    const [token, setToken] = useState(null);
     const [topic, setTopic] = useState('');
     const [choices, setChoices] = useState([]);
     const [selected, setSelected] = useState(null);
-    const [amount, setAmount] = useState('');
     const [votedId, setVotedId] = useState(0);
     const [txPending, setTxPending] = useState(false);
     const [start, setStart] = useState(0);
     const [end, setEnd] = useState(0);
 
-    // signer が変わったらコントラクトを初期化
     useEffect(() => {
-        if (!signer || !address || address === '0x0000000000000000000000000000000000000000') return;
-        const vote = new ethers.Contract(address, WEIGHTED_VOTE_ABI, signer);
-        setContract(vote);
-        (async () => {
-            const tokenAddr = await vote.token();
-            const tok = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
-            setToken(tok);
-        })();
+        if (!signer || !address || address === ZERO) return;
+        const c = new ethers.Contract(address, DYNAMIC_VOTE_ABI, signer);
+        setContract(c);
     }, [signer, address]);
 
-    // 投票状況を取得
     const fetchData = useCallback(async () => {
         if (!contract) return;
         setTopic(await contract.topic());
         setStart(Number(await contract.startTime()));
         setEnd(Number(await contract.endTime()));
         const count = await contract.choiceCount();
-
-        // 各選択肢の取得を並列で実行し、読み込み時間を短縮
-        const promises = [];
+        const arr = [];
         for (let i = 1n; i <= count; i++) {
-            promises.push(
-                Promise.all([contract.choice(i), contract.voteCount(i)]).then(
-                    ([name, votes]) => ({
-                        id: Number(i),
-                        name,
-                        votes: ethers.formatEther(votes), // 18 桁精度を Ether 表記に変換
-                    }),
-                ),
-            );
+            const name = await contract.choice(i);
+            const votes = await contract.voteCount(i);
+            arr.push({ id: Number(i), name, votes: votes.toString() });
         }
-        const arr = await Promise.all(promises);
         setChoices(arr);
-
         if (signer) {
             const addr = await signer.getAddress();
             const id = await contract.votedChoiceId(addr);
             setVotedId(Number(id));
-
-            // 取得した投票情報をコンソールに表示
-            console.log('=== WeightedVote 投票状態 ===');
-            console.log('ユーザーアドレス:', addr);
-            console.log('投票済み選択肢ID:', Number(id));
-            console.log('投票済みかどうか:', Number(id) !== 0);
-            if (Number(id) !== 0) {
-                const votedChoice = arr.find((c) => c.id === Number(id));
-                console.log('投票した選択肢:', votedChoice ? votedChoice.name : '不明');
-            }
-            console.log('選択肢一覧:', arr);
-            console.log('================');
         }
     }, [contract, signer]);
 
-    // 初期化とイベント購読
     useEffect(() => {
         if (!contract) return;
         fetchData();
@@ -85,28 +52,12 @@ function WeightedVote({ signer, address, showToast }) {
         };
     }, [contract, fetchData]);
 
-    // トークンの承認
-    const approve = async () => {
-        if (!token || !amount) return;
-        const value = ethers.parseEther(amount);
-        showToast('トランザクション承認待ち…');
-        try {
-            const tx = await token.approve(address, value);
-            await tx.wait();
-            showToast('承認が完了しました');
-        } catch (err) {
-            showToast(`エラー: ${err.shortMessage ?? err.message}`);
-        }
-    };
-
-    // 投票処理
     const vote = async () => {
-        if (!contract || selected === null || !amount) return;
+        if (!contract || selected === null) return;
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            const value = ethers.parseEther(amount);
-            const tx = await contract.vote(selected, value);
+            const tx = await contract.vote(selected);
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
@@ -117,7 +68,6 @@ function WeightedVote({ signer, address, showToast }) {
         }
     };
 
-    // 投票取消
     const cancelVote = async () => {
         if (!contract) return;
         try {
@@ -134,19 +84,17 @@ function WeightedVote({ signer, address, showToast }) {
         }
     };
 
-    // コントラクトが未設定なら簡易メッセージを表示
-    if (!address || address === '0x0000000000000000000000000000000000000000') {
+    if (!address || address === ZERO) {
         return (
             <section className="flex flex-col items-center gap-4 mt-10">
-                <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
-                <p>コントラクトがデプロイされていません</p>
+                <p>DynamicVote コントラクトアドレスが未設定です</p>
             </section>
         );
     }
 
     return (
         <section className="flex flex-col items-center gap-4 mt-10">
-            <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
+            <h2 className="text-2xl font-bold">DynamicVote</h2>
             <p className="text-lg">議題: {topic}</p>
             <p>開始: {start ? new Date(start * 1000).toLocaleString() : '-'}</p>
             <p>終了: {end ? new Date(end * 1000).toLocaleString() : '-'}</p>
@@ -161,7 +109,7 @@ function WeightedVote({ signer, address, showToast }) {
                     <label key={c.id} className="flex items-center gap-2">
                         <input
                             type="radio"
-                            name="weightedChoice"
+                            name="choice"
                             value={c.id}
                             onChange={() => setSelected(c.id)}
                             checked={selected === c.id}
@@ -170,31 +118,9 @@ function WeightedVote({ signer, address, showToast }) {
                         {c.name} ({c.votes})
                     </label>
                 ))}
-                <input
-                    type="number"
-                    min="0"
-                    placeholder="トークン量"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="border px-2 py-1 rounded"
-                    disabled={votedId !== 0}
-                />
-                <button
-                    type="button"
-                    className="px-4 py-2 rounded-xl bg-green-500 text-white disabled:opacity-50"
-                    onClick={approve}
-                    disabled={!amount || selected === null || votedId !== 0}
-                >
-                    Approve
-                </button>
                 <button
                     className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
-                    disabled={
-                        txPending ||
-                        selected === null ||
-                        !amount ||
-                        votedId !== 0
-                    }
+                    disabled={txPending || selected === null || votedId !== 0}
                 >
                     投票する
                 </button>
@@ -212,4 +138,4 @@ function WeightedVote({ signer, address, showToast }) {
     );
 }
 
-export default WeightedVote;
+export default DynamicVote;
