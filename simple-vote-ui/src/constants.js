@@ -114,7 +114,7 @@ export const DYNAMIC_VOTE_ABI = [
     },
 ];
 
-export const DYNAMIC_VOTE_ADDRESS = '0xd3124b6841Bb84eACb1330b806b683f4a922BAA8';
+export const DYNAMIC_VOTE_ADDRESS = '0xbc655eD4a6415C1ABd09d247C6aDd6B28B58B70F';
 
 export const WEIGHTED_VOTE_ABI = [
     {
@@ -252,75 +252,129 @@ export const WEIGHTED_VOTE_ABI = [
     },
 ];
 
-export const WEIGHTED_VOTE_ADDRESS = '0x26Edef43cCCfEdD5e63c3aE87C7A5E727e9d139e';
+export const WEIGHTED_VOTE_ADDRESS = '0x6E784cb5b67852616125630E8e741114757FBeAE';
 
-export const POLL_MANAGER_ADDRESS = '0xE6c7Dbb554F57B797776e674b29e2523BC68fF15';
+export const POLL_MANAGER_ADDRESS = '0x5D1e1C657585e637080Ba783c7bF02f852168b73';
 
 export const POLL_MANAGER_ABI = [
     {
-        anonymous: false,
-        inputs: [
-            { indexed: true, internalType: 'address', name: 'poll', type: 'address' },
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "poll",
+                "type": "address"
+            }
         ],
-        name: 'DynamicCreated',
-        type: 'event',
+        "name": "DynamicCreated",
+        "type": "event"
     },
     {
-        anonymous: false,
-        inputs: [
-            { indexed: true, internalType: 'address', name: 'poll', type: 'address' },
-            { indexed: false, internalType: 'address', name: 'token', type: 'address' },
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "poll",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            }
         ],
-        name: 'WeightedCreated',
-        type: 'event',
+        "name": "WeightedCreated",
+        "type": "event"
     },
     {
-        inputs: [],
-        name: 'getPolls',
-        outputs: [
-            { internalType: 'address[]', name: 'list', type: 'address[]' },
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "topic",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "startTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "endTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string[]",
+                "name": "choices",
+                "type": "string[]"
+            }
         ],
-        stateMutability: 'view',
-        type: 'function',
+        "name": "createDynamicVote",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        inputs: [
-            { internalType: 'string', name: 'topic', type: 'string' },
-            { internalType: 'uint256', name: 'startTime', type: 'uint256' },
-            { internalType: 'uint256', name: 'endTime', type: 'uint256' },
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "topic",
+                "type": "string"
+            },
+            {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "startTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "endTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string[]",
+                "name": "choices",
+                "type": "string[]"
+            }
         ],
-        name: 'createDynamicVote',
-        outputs: [
-            { internalType: 'address', name: 'addr', type: 'address' },
+        "name": "createWeightedVote",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            }
         ],
-        stateMutability: 'nonpayable',
-        type: 'function',
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        inputs: [
-            { internalType: 'string', name: 'topic', type: 'string' },
-            { internalType: 'address', name: 'token', type: 'address' },
-            { internalType: 'uint256', name: 'startTime', type: 'uint256' },
-            { internalType: 'uint256', name: 'endTime', type: 'uint256' },
+        "inputs": [],
+        "name": "getPolls",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "list",
+                "type": "address[]"
+            }
         ],
-        name: 'createWeightedVote',
-        outputs: [
-            { internalType: 'address', name: 'addr', type: 'address' },
-        ],
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
+        "stateMutability": "view",
+        "type": "function"
+    }
 ];
 
-export const ERC20_ABI = [
-    {
-        inputs: [
-            { internalType: 'address', name: 'spender', type: 'address' },
-            { internalType: 'uint256', name: 'amount', type: 'uint256' },
-        ],
-        name: 'approve',
-        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-];
+export const ERC20_ABI = [];

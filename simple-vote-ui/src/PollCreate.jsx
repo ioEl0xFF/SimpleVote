@@ -75,35 +75,55 @@ function PollCreate({ signer, onCreated, showToast }) {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             let tx;
+            const filteredChoices = choices.filter((c) => c);
+            console.log('Submitting transaction with params:', {
+                topic,
+                token,
+                s,
+                eTime,
+                filteredChoices,
+            });
             if (pollType === 'weighted') {
                 tx = await manager.createWeightedVote(
                     topic,
                     token,
                     s,
                     eTime,
+                    filteredChoices
                 );
             } else {
                 tx = await manager.createDynamicVote(
                     topic,
                     s,
                     eTime,
+                    filteredChoices
                 );
             }
-            await tx.wait();
+            const receipt = await tx.wait();
+            const eventName =
+                pollType === 'weighted'
+                    ? 'WeightedCreated'
+                    : 'DynamicCreated';
+            const event = receipt.logs
+                .map((log) => {
+                    try {
+                        return manager.interface.parseLog(log);
+                    } catch {
+                        return null;
+                    }
+                })
+                .find((log) => log && log.name === eventName);
 
-            const list = await manager.getPolls();
-            const addr = list[list.length - 1];
-            const abi = pollType === 'weighted' ? WEIGHTED_VOTE_ABI : DYNAMIC_VOTE_ABI;
-            const vote = new ethers.Contract(addr, abi, signer);
-            for (const name of choices.filter((c) => c)) {
-                const t = await vote.addChoice(name);
-                await t.wait();
+            if (!event) {
+                showToast('作成された議題のアドレス取得に失敗しました');
+                return;
             }
+            const addr = event.args.poll;
             showToast('議題を作成しました');
             if (onCreated) onCreated();
         } catch (err) {
             const msg = err.reason ?? err.shortMessage ?? err.message;
-            console.error('投票作成エラー', msg);
+            console.error('投票作成エラー', err);
             showToast(`エラー: ${msg}`);
         } finally {
             setTxPending(false);
