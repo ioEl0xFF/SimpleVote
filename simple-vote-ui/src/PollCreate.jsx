@@ -52,13 +52,19 @@ function PollCreate({ signer, onCreated, showToast }) {
     const submit = async (e) => {
         e.preventDefault();
         if (!manager) return;
+        const s = toTimestamp(start);
+        const eTime = toTimestamp(end);
+        if (eTime <= s) {
+            showToast('終了日時は開始日時より後を設定してください');
+            return;
+        }
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             const tx = await manager.createDynamicVote(
                 topic,
-                toTimestamp(start),
-                toTimestamp(end),
+                s,
+                eTime,
             );
             await tx.wait();
             // 直近のアドレスを取得し DynamicVote インスタンス化
@@ -72,7 +78,9 @@ function PollCreate({ signer, onCreated, showToast }) {
             showToast('議題を作成しました');
             if (onCreated) onCreated();
         } catch (err) {
-            showToast(`エラー: ${err.shortMessage ?? err.message}`);
+            const msg = err.reason ?? err.shortMessage ?? err.message;
+            console.error('投票作成エラー', msg);
+            showToast(`エラー: ${msg}`);
         } finally {
             setTxPending(false);
         }
