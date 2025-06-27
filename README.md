@@ -41,7 +41,9 @@ npm test
 
 ## コントラクトデプロイ
 
-ネットワーク情報は `hardhat.config.js` の `networks` セクションで指定します。 `.env` に設定したアカウントでデプロイを実行します。
+このリポジトリでは Polygon の Amoy テストネットを `amoy` ネットワークとして設定しています。
+`.env` には Amoy の RPC URL とデプロイに使用する秘密鍵を入力してください。
+準備ができたら以下のコマンドでデプロイを実行します。
 
 ```bash
 npx hardhat run scripts/deploy.js --network amoy
