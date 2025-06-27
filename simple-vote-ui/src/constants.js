@@ -254,6 +254,64 @@ export const WEIGHTED_VOTE_ABI = [
 
 export const WEIGHTED_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
 
+export const POLL_MANAGER_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+export const POLL_MANAGER_ABI = [
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, internalType: 'address', name: 'poll', type: 'address' },
+        ],
+        name: 'DynamicCreated',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, internalType: 'address', name: 'poll', type: 'address' },
+            { indexed: false, internalType: 'address', name: 'token', type: 'address' },
+        ],
+        name: 'WeightedCreated',
+        type: 'event',
+    },
+    {
+        inputs: [],
+        name: 'getPolls',
+        outputs: [
+            { internalType: 'address[]', name: 'list', type: 'address[]' },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [
+            { internalType: 'string', name: 'topic', type: 'string' },
+            { internalType: 'uint256', name: 'startTime', type: 'uint256' },
+            { internalType: 'uint256', name: 'endTime', type: 'uint256' },
+        ],
+        name: 'createDynamicVote',
+        outputs: [
+            { internalType: 'address', name: 'addr', type: 'address' },
+        ],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [
+            { internalType: 'string', name: 'topic', type: 'string' },
+            { internalType: 'address', name: 'token', type: 'address' },
+            { internalType: 'uint256', name: 'startTime', type: 'uint256' },
+            { internalType: 'uint256', name: 'endTime', type: 'uint256' },
+        ],
+        name: 'createWeightedVote',
+        outputs: [
+            { internalType: 'address', name: 'addr', type: 'address' },
+        ],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+];
+
 export const ERC20_ABI = [
     {
         inputs: [
