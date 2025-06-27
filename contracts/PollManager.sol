@@ -26,9 +26,10 @@ contract PollManager {
     function createDynamicVote(
         string calldata topic,
         uint256 startTime,
-        uint256 endTime
+        uint256 endTime,
+        string[] calldata choices
     ) external returns (address addr) {
-        DynamicVote vote = new DynamicVote(topic, startTime, endTime);
+        DynamicVote vote = new DynamicVote(topic, startTime, endTime, choices);
         vote.transferOwnership(msg.sender);
         addr = address(vote);
         _polls.push(addr);
@@ -44,9 +45,10 @@ contract PollManager {
         string calldata topic,
         IERC20 token,
         uint256 startTime,
-        uint256 endTime
+        uint256 endTime,
+        string[] calldata choices
     ) external returns (address addr) {
-        WeightedVote vote = new WeightedVote(topic, token, startTime, endTime);
+        WeightedVote vote = new WeightedVote(topic, token, startTime, endTime, choices);
         vote.transferOwnership(msg.sender);
         addr = address(vote);
         _polls.push(addr);

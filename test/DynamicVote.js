@@ -15,10 +15,8 @@ describe('DynamicVote cancel/revote', function () {
         [owner, addr1, addr2] = await ethers.getSigners();
         start = (await time.latest()) + 10;
         end = start + 3600;
-        vote = await Vote.deploy('Favorite fruit', start, end);
+        vote = await Vote.deploy('Favorite fruit', start, end, ['Apple', 'Orange']);
         await vote.waitForDeployment();
-        await vote.addChoice('Apple');
-        await vote.addChoice('Orange');
         await time.increaseTo(start + 1);
     });
 
@@ -66,9 +64,8 @@ describe('DynamicVote cancel/revote', function () {
         const now = await time.latest();
         const s = now + 100;
         const e = s + 3600;
-        const v = await Vote.deploy('Fruit', s, e);
+        const v = await Vote.deploy('Fruit', s, e, ['Apple']);
         await v.waitForDeployment();
-        await v.addChoice('Apple');
         await expect(v.connect(addr1).vote(1)).to.be.revertedWith('Voting closed');
     });
 
@@ -77,9 +74,8 @@ describe('DynamicVote cancel/revote', function () {
         const now = await time.latest();
         const s = now + 3;
         const e = s + 4;
-        const v = await Vote.deploy('Fruit', s, e);
+        const v = await Vote.deploy('Fruit', s, e, ['Apple']);
         await v.waitForDeployment();
-        await v.addChoice('Apple');
         await time.increaseTo(s + 1);
         await v.connect(addr1).vote(1);
         await time.increaseTo(e + 1);

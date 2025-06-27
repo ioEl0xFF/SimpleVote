@@ -33,15 +33,23 @@ contract DynamicVote is Ownable {
     /// @param _topic 議題
     /// @param _startTime 投票開始時刻
     /// @param _endTime 投票終了時刻
+    /// @param _choices 初期選択肢の配列
     constructor(
         string memory _topic,
         uint256 _startTime,
-        uint256 _endTime
+        uint256 _endTime,
+        string[] memory _choices
     ) Ownable(msg.sender) {
         require(_endTime > _startTime, "end must be after start");
         topic = _topic;
         startTime = _startTime;
         endTime = _endTime;
+
+        for (uint i = 0; i < _choices.length; i++) {
+            if (bytes(_choices[i]).length > 0) {
+                _addChoiceInternal(_choices[i]);
+            }
+        }
     }
 
     /**
@@ -49,6 +57,14 @@ contract DynamicVote is Ownable {
      * @param name 選択肢の名前
      */
     function addChoice(string calldata name) external onlyOwner {
+        _addChoiceInternal(name);
+    }
+
+    /**
+     * @notice 選択肢を追加する内部関数
+     * @param name 選択肢の名前
+     */
+    function _addChoiceInternal(string memory name) internal {
         require(choiceCount < 10, "too many choices");
         uint256 id = ++choiceCount;
         choice[id] = name;

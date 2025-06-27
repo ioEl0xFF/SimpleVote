@@ -19,10 +19,8 @@ describe('WeightedVote token deposit', function () {
         await token.mint(owner.address, ethers.parseEther('1000'));
         start = (await time.latest()) + 10;
         end = start + 3600;
-        vote = await Vote.deploy('Best color', token.target, start, end);
+        vote = await Vote.deploy('Best color', token.target, start, end, ['Red', 'Blue']);
         await vote.waitForDeployment();
-        await vote.addChoice('Red');
-        await vote.addChoice('Blue');
         await token.transfer(addr1.address, ethers.parseEther('100'));
         await time.increaseTo(start + 1);
     });
@@ -65,9 +63,8 @@ describe('WeightedVote token deposit', function () {
         const now = await time.latest();
         const s = now + 100;
         const e = s + 3600;
-        const v = await Vote.deploy('Color', token.target, s, e);
+        const v = await Vote.deploy('Color', token.target, s, e, ['Red']);
         await v.waitForDeployment();
-        await v.addChoice('Red');
         await token.connect(addr1).approve(v.target, ethers.parseEther('1'));
         await expect(
             v.connect(addr1).vote(1, ethers.parseEther('1'))
@@ -79,9 +76,8 @@ describe('WeightedVote token deposit', function () {
         const now = await time.latest();
         const s = now + 3;
         const e = s + 4;
-        const v = await Vote.deploy('Color', token.target, s, e);
+        const v = await Vote.deploy('Color', token.target, s, e, ['Red']);
         await v.waitForDeployment();
-        await v.addChoice('Red');
         const amount = ethers.parseEther('1');
         await token.connect(addr1).approve(v.target, amount);
         await time.increaseTo(s + 1);
@@ -96,4 +92,3 @@ describe('WeightedVote token deposit', function () {
         );
     });
 });
-

@@ -4,16 +4,20 @@ import {
     POLL_MANAGER_ABI,
     POLL_MANAGER_ADDRESS,
     DYNAMIC_VOTE_ABI,
+    WEIGHTED_VOTE_ABI,
+    MOCK_ERC20_ADDRESS,
 } from './constants';
 
 const ZERO = '0x0000000000000000000000000000000000000000';
 
-// PollManager を使って新しい DynamicVote を作成するフォーム
+// PollManager を使って DynamicVote か WeightedVote を作成するフォーム
 function PollCreate({ signer, onCreated, showToast }) {
     const [manager, setManager] = useState(null);
+    const [pollType, setPollType] = useState('dynamic');
     const [topic, setTopic] = useState('');
     const [start, setStart] = useState('');
     const [end, setEnd] = useState('');
+    const [token, setToken] = useState(MOCK_ERC20_ADDRESS);
     const [choices, setChoices] = useState(['', '']);
     const [txPending, setTxPending] = useState(false);
 
@@ -54,32 +58,73 @@ function PollCreate({ signer, onCreated, showToast }) {
         if (!manager) return;
         const s = toTimestamp(start);
         const eTime = toTimestamp(end);
+        if (Number.isNaN(s) || Number.isNaN(eTime)) {
+            showToast('日時を正しく入力してください');
+            return;
+        }
         if (eTime <= s) {
             showToast('終了日時は開始日時より後を設定してください');
             return;
         }
+        if (pollType === 'weighted') {
+            if (!token || !ethers.isAddress(token)) {
+                showToast('トークンアドレスを正しく入力してください');
+                return;
+            }
+        }
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            const tx = await manager.createDynamicVote(
+            let tx;
+            const filteredChoices = choices.filter((c) => c);
+            console.log('Submitting transaction with params:', {
                 topic,
+                token,
                 s,
                 eTime,
-            );
-            await tx.wait();
-            // 直近のアドレスを取得し DynamicVote インスタンス化
-            const list = await manager.getPolls();
-            const addr = list[list.length - 1];
-            const vote = new ethers.Contract(addr, DYNAMIC_VOTE_ABI, signer);
-            for (const name of choices.filter((c) => c)) {
-                const t = await vote.addChoice(name);
-                await t.wait();
+                filteredChoices,
+            });
+            if (pollType === 'weighted') {
+                tx = await manager.createWeightedVote(
+                    topic,
+                    token,
+                    s,
+                    eTime,
+                    filteredChoices
+                );
+            } else {
+                tx = await manager.createDynamicVote(
+                    topic,
+                    s,
+                    eTime,
+                    filteredChoices
+                );
             }
+            const receipt = await tx.wait();
+            const eventName =
+                pollType === 'weighted'
+                    ? 'WeightedCreated'
+                    : 'DynamicCreated';
+            const event = receipt.logs
+                .map((log) => {
+                    try {
+                        return manager.interface.parseLog(log);
+                    } catch {
+                        return null;
+                    }
+                })
+                .find((log) => log && log.name === eventName);
+
+            if (!event) {
+                showToast('作成された議題のアドレス取得に失敗しました');
+                return;
+            }
+            const addr = event.args.poll;
             showToast('議題を作成しました');
             if (onCreated) onCreated();
         } catch (err) {
+            console.error('投票作成エラー', err);
             const msg = err.reason ?? err.shortMessage ?? err.message;
-            console.error('投票作成エラー', msg);
             showToast(`エラー: ${msg}`);
         } finally {
             setTxPending(false);
@@ -93,6 +138,28 @@ function PollCreate({ signer, onCreated, showToast }) {
     return (
         <form className="flex flex-col gap-2" onSubmit={submit}>
             <h2 className="text-xl font-bold">新しい議題を作成</h2>
+            <label className="flex gap-4">
+                <span>種類</span>
+                <select
+                    className="border px-2 py-1"
+                    value={pollType}
+                    onChange={(e) => setPollType(e.target.value)}
+                >
+                    <option value="dynamic">Dynamic</option>
+                    <option value="weighted">Weighted</option>
+                </select>
+            </label>
+            {pollType === 'weighted' && (
+                <label className="flex flex-col gap-1">
+                    トークンアドレス
+                    <input
+                        className="border px-2 py-1 font-mono"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        required
+                    />
+                </label>
+            )}
             <label className="flex flex-col gap-1">
                 トピック
                 <input
