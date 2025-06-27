@@ -53,5 +53,11 @@ describe('WeightedVote token deposit', function () {
             vote.connect(addr1).vote(1, amount)
         ).to.be.revertedWith('Already voted. Cancel first');
     });
+
+    it('0 トークンでは投票できない', async () => {
+        await expect(vote.connect(addr1).vote(1, 0)).to.be.revertedWith(
+            'amount zero'
+        );
+    });
 });
 
