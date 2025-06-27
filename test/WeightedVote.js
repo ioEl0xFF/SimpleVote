@@ -58,6 +58,12 @@ describe('WeightedVote token deposit', function () {
         ).to.be.revertedWith('Already voted. Cancel first');
     });
 
+    it('0 トークンでは投票できない', async () => {
+        await expect(vote.connect(addr1).vote(1, 0)).to.be.revertedWith(
+            'amount zero'
+        );
+    });
+
     it('開始前は投票できない', async () => {
         const Vote = await ethers.getContractFactory('WeightedVote');
         const now = await time.latest();

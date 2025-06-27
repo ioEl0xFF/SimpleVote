@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title WeightedVote
@@ -10,6 +11,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * DynamicVote を基に、投票時に ERC20 トークンを預け入れます。
  */
 contract WeightedVote is Ownable {
+    using SafeERC20 for IERC20;
     /// 投票に使うトークン
     IERC20 public immutable token;
     /// 議題
@@ -91,7 +93,8 @@ contract WeightedVote is Ownable {
         require(choiceId > 0 && choiceId <= choiceCount, "invalid id");
         require(amount > 0, "amount zero");
 
-        require(token.transferFrom(msg.sender, address(this), amount));
+        // SafeERC20 を使って転送失敗を確実に検知する
+        token.safeTransferFrom(msg.sender, address(this), amount);
         voteCount[choiceId] += amount;
         deposited[msg.sender] = amount;
         votedChoiceId[msg.sender] = choiceId;
@@ -110,7 +113,8 @@ contract WeightedVote is Ownable {
         voteCount[prev] -= amount;
         deposited[msg.sender] = 0;
         votedChoiceId[msg.sender] = 0;
-        require(token.transfer(msg.sender, amount));
+        // 預けたトークンを安全に返却
+        token.safeTransfer(msg.sender, amount);
         emit VoteCancelled(msg.sender, prev, amount);
     }
 
