@@ -5,6 +5,8 @@ import {
     ERC20_ABI,
 } from './constants';
 
+// WeightedVote コントラクト用の汎用コンポーネント
+
 // 指定アドレスの WeightedVote を操作
 function WeightedVote({ signer, address, showToast }) {
     const [contract, setContract] = useState(null);
@@ -58,18 +60,6 @@ function WeightedVote({ signer, address, showToast }) {
             const addr = await signer.getAddress();
             const id = await contract.votedChoiceId(addr);
             setVotedId(Number(id));
-
-            // 取得した投票情報をコンソールに表示
-            console.log('=== WeightedVote 投票状態 ===');
-            console.log('ユーザーアドレス:', addr);
-            console.log('投票済み選択肢ID:', Number(id));
-            console.log('投票済みかどうか:', Number(id) !== 0);
-            if (Number(id) !== 0) {
-                const votedChoice = arr.find((c) => c.id === Number(id));
-                console.log('投票した選択肢:', votedChoice ? votedChoice.name : '不明');
-            }
-            console.log('選択肢一覧:', arr);
-            console.log('================');
         }
     }, [contract, signer]);
 

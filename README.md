@@ -6,6 +6,7 @@
 
 - **DynamicVote**: 選択肢を後から追加できる投票コントラクト
 - **WeightedVote**: ERC20 トークンを預けて投票数に重み付けを行う拡張版
+- **PollManager**: DynamicVote か WeightedVote を生成して一覧管理する
 - **simple-vote-ui**: 上記コントラクトを操作する React アプリ
 
 ## ディレクトリ構成
