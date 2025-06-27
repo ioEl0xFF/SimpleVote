@@ -55,7 +55,6 @@ cd simple-vote-ui
 npm install
 npm run dev
 ```
-※ `npx run dev` と入力すると `Cannot find module '<path>/dev'` というエラーになるので、必ず `npm run dev` を実行してください。
 
 ブラウザで表示された URL にアクセスすると、Metamask 等のウォレットを使ってコントラクトを操作できます。`npm run lint` で ESLint を実行できます。
 
