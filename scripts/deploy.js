@@ -59,43 +59,10 @@ async function main() {
     const [deployer] = await hre.ethers.getSigners();
     await token.mint(deployer.address, hre.ethers.parseEther('1000'));
 
-    const now = Math.floor(Date.now() / 1000);
-    const start = now + 60;
-    const end = start + 3600;
-    const tx1 = await manager.createDynamicVote('Cats vs Dogs', start, end, [
-        'Cats',
-        'Dogs',
-    ]);
-    await tx1.wait();
-
-    const wStart = now + 120;
-    const wEnd = wStart + 3600;
-    const tx2 = await manager.createWeightedVote(
-        'Best color',
-        token.target,
-        wStart,
-        wEnd,
-        ['Red', 'Blue']
-    );
-    await tx2.wait();
-
-    const polls = await manager.getPolls();
-    const dynamicAddr = polls[0];
-    const weightedAddr = polls[1];
-
-    const Vote = await hre.ethers.getContractFactory('DynamicVote');
-    const Weighted = await hre.ethers.getContractFactory('WeightedVote');
-    const dynamic = Vote.attach(dynamicAddr);
-    const weighted = Weighted.attach(weightedAddr);
-
-    console.log('DynamicVote deployed to:', dynamic.target);
-    console.log('WeightedVote deployed to:', weighted.target);
     console.log('VoteToken deployed to:', token.target);
 
     // 生成したアドレスをフロントエンドに反映
     data = fs.readFileSync(constantsPath, 'utf8');
-    data = updateConstant(data, 'DYNAMIC_VOTE_ADDRESS', dynamic.target);
-    data = updateConstant(data, 'WEIGHTED_VOTE_ADDRESS', weighted.target);
     data = updateConstant(data, 'MOCK_ERC20_ADDRESS', token.target);
 
     // ABI を反映
