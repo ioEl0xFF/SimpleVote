@@ -32,18 +32,22 @@ function PollList({ signer, onSelect }) {
     useEffect(() => {
         if (!manager) return;
         const fetch = async () => {
-            const addrs = await manager.getPolls();
-            const list = [];
-            for (const a of addrs) {
-                const cont = new ethers.Contract(a, WEIGHTED_VOTE_ABI, signer);
-                try {
-                    await cont.token();
-                    list.push({ addr: a, type: 'weighted' });
-                } catch {
-                    list.push({ addr: a, type: 'dynamic' });
+            try {
+                const addrs = await manager.getPolls();
+                const list = [];
+                for (const a of addrs) {
+                    const cont = new ethers.Contract(a, WEIGHTED_VOTE_ABI, signer);
+                    try {
+                        await cont.token();
+                        list.push({ addr: a, type: 'weighted' });
+                    } catch {
+                        list.push({ addr: a, type: 'dynamic' });
+                    }
                 }
+                setPolls(list);
+            } catch (err) {
+                console.error('fetch polls error', err);
             }
-            setPolls(list);
         };
         fetch();
         manager.on('DynamicCreated', fetch);

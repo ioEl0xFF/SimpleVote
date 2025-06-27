@@ -36,8 +36,11 @@ function WeightedVote({ signer, address, showToast }) {
     const fetchData = useCallback(async () => {
         if (!contract) return;
         setTopic(await contract.topic());
-        setStart(Number(await contract.startTime()));
-        setEnd(Number(await contract.endTime()));
+        const s = Number(await contract.startTime());
+        const e = Number(await contract.endTime());
+        console.log('start', s, 'end', e);
+        setStart(s);
+        setEnd(e);
         const count = await contract.choiceCount();
 
         // 各選択肢の取得を並列で実行し、読み込み時間を短縮
@@ -85,6 +88,7 @@ function WeightedVote({ signer, address, showToast }) {
             await tx.wait();
             showToast('承認が完了しました');
         } catch (err) {
+            console.error('approve error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         }
     };
@@ -96,11 +100,13 @@ function WeightedVote({ signer, address, showToast }) {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             const value = ethers.parseEther(amount);
+            console.log('vote parameters', { choiceId: selected, amount: value.toString() });
             const tx = await contract.vote(selected, value);
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
         } catch (err) {
+            console.error('vote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
@@ -118,6 +124,7 @@ function WeightedVote({ signer, address, showToast }) {
             await fetchData();
             showToast('投票を取り消しました');
         } catch (err) {
+            console.error('cancelVote error', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
