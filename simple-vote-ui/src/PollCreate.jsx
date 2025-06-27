@@ -4,16 +4,19 @@ import {
     POLL_MANAGER_ABI,
     POLL_MANAGER_ADDRESS,
     DYNAMIC_VOTE_ABI,
+    WEIGHTED_VOTE_ABI,
 } from './constants';
 
 const ZERO = '0x0000000000000000000000000000000000000000';
 
-// PollManager を使って新しい DynamicVote を作成するフォーム
+// PollManager を使って DynamicVote か WeightedVote を作成するフォーム
 function PollCreate({ signer, onCreated, showToast }) {
     const [manager, setManager] = useState(null);
+    const [pollType, setPollType] = useState('dynamic');
     const [topic, setTopic] = useState('');
     const [start, setStart] = useState('');
     const [end, setEnd] = useState('');
+    const [token, setToken] = useState('');
     const [choices, setChoices] = useState(['', '']);
     const [txPending, setTxPending] = useState(false);
 
@@ -58,19 +61,34 @@ function PollCreate({ signer, onCreated, showToast }) {
             showToast('終了日時は開始日時より後を設定してください');
             return;
         }
+        if (pollType === 'weighted' && !token) {
+            showToast('トークンアドレスを入力してください');
+            return;
+        }
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            const tx = await manager.createDynamicVote(
-                topic,
-                s,
-                eTime,
-            );
+            let tx;
+            if (pollType === 'weighted') {
+                tx = await manager.createWeightedVote(
+                    topic,
+                    token,
+                    s,
+                    eTime,
+                );
+            } else {
+                tx = await manager.createDynamicVote(
+                    topic,
+                    s,
+                    eTime,
+                );
+            }
             await tx.wait();
-            // 直近のアドレスを取得し DynamicVote インスタンス化
+
             const list = await manager.getPolls();
             const addr = list[list.length - 1];
-            const vote = new ethers.Contract(addr, DYNAMIC_VOTE_ABI, signer);
+            const abi = pollType === 'weighted' ? WEIGHTED_VOTE_ABI : DYNAMIC_VOTE_ABI;
+            const vote = new ethers.Contract(addr, abi, signer);
             for (const name of choices.filter((c) => c)) {
                 const t = await vote.addChoice(name);
                 await t.wait();
@@ -93,6 +111,28 @@ function PollCreate({ signer, onCreated, showToast }) {
     return (
         <form className="flex flex-col gap-2" onSubmit={submit}>
             <h2 className="text-xl font-bold">新しい議題を作成</h2>
+            <label className="flex gap-4">
+                <span>種類</span>
+                <select
+                    className="border px-2 py-1"
+                    value={pollType}
+                    onChange={(e) => setPollType(e.target.value)}
+                >
+                    <option value="dynamic">Dynamic</option>
+                    <option value="weighted">Weighted</option>
+                </select>
+            </label>
+            {pollType === 'weighted' && (
+                <label className="flex flex-col gap-1">
+                    トークンアドレス
+                    <input
+                        className="border px-2 py-1 font-mono"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        required
+                    />
+                </label>
+            )}
             <label className="flex flex-col gap-1">
                 トピック
                 <input
