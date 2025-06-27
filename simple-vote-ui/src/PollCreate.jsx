@@ -57,13 +57,19 @@ function PollCreate({ signer, onCreated, showToast }) {
         if (!manager) return;
         const s = toTimestamp(start);
         const eTime = toTimestamp(end);
+        if (Number.isNaN(s) || Number.isNaN(eTime)) {
+            showToast('日時を正しく入力してください');
+            return;
+        }
         if (eTime <= s) {
             showToast('終了日時は開始日時より後を設定してください');
             return;
         }
-        if (pollType === 'weighted' && !token) {
-            showToast('トークンアドレスを入力してください');
-            return;
+        if (pollType === 'weighted') {
+            if (!token || !ethers.isAddress(token)) {
+                showToast('トークンアドレスを正しく入力してください');
+                return;
+            }
         }
         try {
             setTxPending(true);
