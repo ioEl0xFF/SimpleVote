@@ -20,6 +20,7 @@ function PollCreate({ signer, onCreated, showToast }) {
     // signer から PollManager を初期化
     useEffect(() => {
         if (!signer || POLL_MANAGER_ADDRESS === ZERO) return;
+        console.log('PollManager アドレス', POLL_MANAGER_ADDRESS);
         const m = new ethers.Contract(
             POLL_MANAGER_ADDRESS,
             POLL_MANAGER_ABI,
@@ -53,6 +54,12 @@ function PollCreate({ signer, onCreated, showToast }) {
         e.preventDefault();
         if (!manager) return;
         try {
+            console.log('投票作成開始', {
+                topic,
+                start: toTimestamp(start),
+                end: toTimestamp(end),
+                choices,
+            });
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             const tx = await manager.createDynamicVote(
@@ -64,14 +71,17 @@ function PollCreate({ signer, onCreated, showToast }) {
             // 直近のアドレスを取得し DynamicVote インスタンス化
             const list = await manager.getPolls();
             const addr = list[list.length - 1];
+            console.log('新規 DynamicVote アドレス', addr);
             const vote = new ethers.Contract(addr, DYNAMIC_VOTE_ABI, signer);
             for (const name of choices.filter((c) => c)) {
+                console.log('選択肢追加', name);
                 const t = await vote.addChoice(name);
                 await t.wait();
             }
             showToast('議題を作成しました');
             if (onCreated) onCreated();
         } catch (err) {
+            console.error('投票作成エラー', err);
             showToast(`エラー: ${err.shortMessage ?? err.message}`);
         } finally {
             setTxPending(false);
