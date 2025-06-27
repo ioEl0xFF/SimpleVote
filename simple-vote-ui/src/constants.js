@@ -114,13 +114,17 @@ export const DYNAMIC_VOTE_ABI = [
     },
 ];
 
-export const DYNAMIC_VOTE_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+export const DYNAMIC_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+export const WEIGHTED_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export const WEIGHTED_VOTE_ABI = [
     {
         inputs: [
             { internalType: 'string', name: '_topic', type: 'string' },
             { internalType: 'address', name: '_token', type: 'address' },
+            { internalType: 'uint256', name: '_startTime', type: 'uint256' },
+            { internalType: 'uint256', name: '_endTime', type: 'uint256' },
         ],
         stateMutability: 'nonpayable',
         type: 'constructor',
@@ -234,19 +238,147 @@ export const WEIGHTED_VOTE_ABI = [
         stateMutability: 'view',
         type: 'function',
     },
-];
-
-export const WEIGHTED_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-export const ERC20_ABI = [
     {
-        inputs: [
-            { internalType: 'address', name: 'spender', type: 'address' },
-            { internalType: 'uint256', name: 'amount', type: 'uint256' },
-        ],
-        name: 'approve',
-        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-        stateMutability: 'nonpayable',
+        inputs: [],
+        name: 'startTime',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'endTime',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
         type: 'function',
     },
 ];
+
+
+
+export const POLL_MANAGER_ADDRESS = '0x326bad8FD0583E6dbfc0cc25979488aBb879ae82';
+
+export const POLL_MANAGER_ABI = [
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "poll",
+                "type": "address"
+            }
+        ],
+        "name": "DynamicCreated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "poll",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            }
+        ],
+        "name": "WeightedCreated",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "topic",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "startTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "endTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string[]",
+                "name": "choices",
+                "type": "string[]"
+            }
+        ],
+        "name": "createDynamicVote",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "topic",
+                "type": "string"
+            },
+            {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "startTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "endTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string[]",
+                "name": "choices",
+                "type": "string[]"
+            }
+        ],
+        "name": "createWeightedVote",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPolls",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "list",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+];
+
+export const ERC20_ABI = [];
+
+export const MOCK_ERC20_ADDRESS = '0x140Ba1fc5adc9Db4ff33b47408D1C4Bb2c2611b9';

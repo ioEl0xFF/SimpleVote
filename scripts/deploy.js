@@ -2,50 +2,77 @@ const hre = require('hardhat');
 const fs = require('fs');
 const path = require('path');
 
-async function main() {
-    const Vote = await hre.ethers.getContractFactory('DynamicVote');
-    const now = Math.floor(Date.now() / 1000);
-    const start = now + 60;
-    const end = start + 3600;
-    const vote = await Vote.deploy('Cats vs Dogs', start, end);
-    await vote.waitForDeployment();
-    await vote.addChoice('Cats');
-    await vote.addChoice('Dogs');
-    console.log('DynamicVote deployed to:', vote.target);
+// ABI を取得してファイルパスを返す
+const getAbi = (contractName) => {
+    try {
+        const dir = path.resolve(
+            __dirname,
+            `../artifacts/contracts/${contractName}.sol`
+        );
+        const file = fs.readFileSync(path.join(dir, `${contractName}.json`));
+        const json = JSON.parse(file);
+        return json.abi;
+    } catch (e) {
+        console.log(`e`, e);
+    }
+};
 
-    // フロントエンドのアドレスを書き換え
-    const constantsPath = path.join(__dirname, '..', 'simple-vote-ui', 'src', 'constants.js');
-    let data = fs.readFileSync(constantsPath, 'utf8');
-    data = data.replace(
-        /export const DYNAMIC_VOTE_ADDRESS = '0x[0-9a-fA-F]+';/,
-        `export const DYNAMIC_VOTE_ADDRESS = '${vote.target}';`
+async function main() {
+    const Manager = await hre.ethers.getContractFactory('PollManager');
+    const Token = await hre.ethers.getContractFactory('MockERC20');
+
+    // PollManager のデプロイ
+    const manager = await Manager.deploy();
+    await manager.waitForDeployment();
+    console.log('PollManager deployed to:', manager.target);
+
+    // フロントエンドのアドレス書き換え設定
+    const constantsPath = path.join(
+        __dirname,
+        '..',
+        'simple-vote-ui',
+        'src',
+        'constants.js'
     );
+
+    // ファイルを読み込み後でアドレスを書き換える関数
+    const updateConstant = (content, key, value) => {
+        const regex = new RegExp(`export const ${key} = ('|")[^'"]*('|");`);
+        return content.replace(regex, `export const ${key} = '${value}';`);
+    };
+
+    // ABI を書き換える関数
+    const updateAbi = (content, key, abi) => {
+        const abiString = JSON.stringify(abi, null, 4);
+        const regex = new RegExp(`export const ${key} = \[\s*.*\];`, 's');
+        return content.replace(regex, `export const ${key} = ${abiString};`);
+    };
+
+    let data = fs.readFileSync(constantsPath, 'utf8');
+    data = updateConstant(data, 'POLL_MANAGER_ADDRESS', manager.target);
     fs.writeFileSync(constantsPath, data);
-    console.log('Updated DYNAMIC_VOTE_ADDRESS in constants.js');
+    console.log('Updated POLL_MANAGER_ADDRESS in constants.js');
 
     // WeightedVote 用のトークンをデプロイ
-    const Token = await hre.ethers.getContractFactory('MockERC20');
     const token = await Token.deploy('VoteToken', 'VTK');
     await token.waitForDeployment();
     const [deployer] = await hre.ethers.getSigners();
     await token.mint(deployer.address, hre.ethers.parseEther('1000'));
 
-    const Weighted = await hre.ethers.getContractFactory('WeightedVote');
-    const weighted = await Weighted.deploy('Best color', token.target);
-    await weighted.waitForDeployment();
-    await weighted.addChoice('Red');
-    await weighted.addChoice('Blue');
-    console.log('WeightedVote deployed to:', weighted.target);
     console.log('VoteToken deployed to:', token.target);
 
-    // フロントエンドの WeightedVote アドレスを書き換え
+    // 生成したアドレスをフロントエンドに反映
     data = fs.readFileSync(constantsPath, 'utf8');
-    data = data.replace(
-        /export const WEIGHTED_VOTE_ADDRESS = '0x[0-9a-fA-F]+';/,
-        `export const WEIGHTED_VOTE_ADDRESS = '${weighted.target}';`
-    );
+    data = updateConstant(data, 'MOCK_ERC20_ADDRESS', token.target);
+
+    // ABI を反映
+    data = updateAbi(data, 'POLL_MANAGER_ABI', getAbi('PollManager'));
+    data = updateAbi(data, 'DYNAMIC_VOTE_ABI', getAbi('DynamicVote'));
+    data = updateAbi(data, 'WEIGHTED_VOTE_ABI', getAbi('WeightedVote'));
+    data = updateAbi(data, 'ERC20_ABI', getAbi('MockERC20'));
+
     fs.writeFileSync(constantsPath, data);
-    console.log('Updated WEIGHTED_VOTE_ADDRESS in constants.js');
+    console.log('Updated vote addresses and ABIs in constants.js');
 }
 
 main().catch((error) => {
