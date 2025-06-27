@@ -5,6 +5,7 @@ import {
     POLL_MANAGER_ADDRESS,
     DYNAMIC_VOTE_ABI,
     WEIGHTED_VOTE_ABI,
+    MOCK_ERC20_ADDRESS,
 } from './constants';
 
 const ZERO = '0x0000000000000000000000000000000000000000';
@@ -16,7 +17,7 @@ function PollCreate({ signer, onCreated, showToast }) {
     const [topic, setTopic] = useState('');
     const [start, setStart] = useState('');
     const [end, setEnd] = useState('');
-    const [token, setToken] = useState('');
+    const [token, setToken] = useState(MOCK_ERC20_ADDRESS);
     const [choices, setChoices] = useState(['', '']);
     const [txPending, setTxPending] = useState(false);
 
@@ -122,8 +123,8 @@ function PollCreate({ signer, onCreated, showToast }) {
             showToast('議題を作成しました');
             if (onCreated) onCreated();
         } catch (err) {
-            const msg = err.reason ?? err.shortMessage ?? err.message;
             console.error('投票作成エラー', err);
+            const msg = err.reason ?? err.shortMessage ?? err.message;
             showToast(`エラー: ${msg}`);
         } finally {
             setTxPending(false);

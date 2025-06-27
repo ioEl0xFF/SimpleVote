@@ -96,6 +96,7 @@ async function main() {
     data = fs.readFileSync(constantsPath, 'utf8');
     data = updateConstant(data, 'DYNAMIC_VOTE_ADDRESS', dynamic.target);
     data = updateConstant(data, 'WEIGHTED_VOTE_ADDRESS', weighted.target);
+    data = updateConstant(data, 'MOCK_ERC20_ADDRESS', token.target);
 
     // ABI を反映
     data = updateAbi(data, 'POLL_MANAGER_ABI', getAbi('PollManager'));
