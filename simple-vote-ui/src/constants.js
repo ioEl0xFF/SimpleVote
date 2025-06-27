@@ -258,6 +258,23 @@ export const POLL_MANAGER_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 export const POLL_MANAGER_ABI = [
     {
+        anonymous: false,
+        inputs: [
+            { indexed: true, internalType: 'address', name: 'poll', type: 'address' },
+        ],
+        name: 'DynamicCreated',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, internalType: 'address', name: 'poll', type: 'address' },
+            { indexed: false, internalType: 'address', name: 'token', type: 'address' },
+        ],
+        name: 'WeightedCreated',
+        type: 'event',
+    },
+    {
         inputs: [],
         name: 'getPolls',
         outputs: [
