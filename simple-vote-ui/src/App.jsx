@@ -89,6 +89,7 @@ function App() {
                     setPage(p.type);
                 }}
                 onCreate={() => setPage('create')}
+                showToast={showToast}
             />
         );
     };
