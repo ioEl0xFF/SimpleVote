@@ -11,7 +11,7 @@ import {
 const ZERO = '0x0000000000000000000000000000000000000000';
 
 // PollManager を使って DynamicVote か WeightedVote を作成するフォーム
-function PollCreate({ signer, onCreated, showToast }) {
+function PollCreate({ signer, onCreated, showToast, onBack }) {
     const [manager, setManager] = useState(null);
     const [pollType, setPollType] = useState('dynamic');
     const [topic, setTopic] = useState('');
@@ -215,6 +215,15 @@ function PollCreate({ signer, onCreated, showToast }) {
             >
                 作成
             </button>
+            {onBack && (
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-gray-400 text-white"
+                    onClick={onBack}
+                >
+                    戻る
+                </button>
+            )}
         </form>
     );
 }

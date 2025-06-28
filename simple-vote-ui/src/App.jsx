@@ -57,6 +57,7 @@ function App() {
                     signer={signer}
                     onCreated={() => setPage('list')}
                     showToast={showToast}
+                    onBack={() => setPage('list')}
                 />
             );
         }
