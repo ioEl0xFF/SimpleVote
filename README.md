@@ -1,57 +1,80 @@
-<<<<<<< HEAD
 # SimpleVote
 
-簡単な投票システムを学習用にまとめたリポジトリです。Hardhat で Solidity コントラクトを管理し、React 製のフロントエンドから投票を行います。
+Solidity と React を使ったシンプルな投票（dApp）のサンプルプロジェクトです。スマートコントラクト開発フレームワーク Hardhat を利用して、各種コントラクトのコンパイル・テスト・デプロイを管理します。
 
-## 特徴
+## 主な特徴
 
-- **DynamicVote**: 選択肢を後から追加できる投票コントラクト
-- **WeightedVote**: ERC20 トークンを預けて投票数に重み付けを行う拡張版
-- **PollManager**: DynamicVote か WeightedVote を生成して一覧管理する
-- **simple-vote-ui**: 上記コントラクトを操作する React アプリ
+-   **3種類の投票コントラクト**:
+    -   `SimpleVote`: 「賛成/反対」のみの最もシンプルな投票です。
+    -   `DynamicVote`: オーナーが選択肢を後から自由に追加できる、より柔軟な投票です。
+    -   `WeightedVote`: `DynamicVote`を拡張し、ERC20 トークンを預けることで投票に重み付けができます。
+-   **投票管理コントラクト**:
+    -   `PollManager`: 上記の投票コントラクトを新規に生成し、一覧を管理します。
+-   **React フロントエンド**:
+    -   `simple-vote-ui`: Vite で構築された React アプリケーションから、MetaMask を通じて各コントラクトを操作できます。
+
+## 技術スタック
+
+-   **スマートコントラクト**: Solidity, Hardhat, OpenZeppelin Contracts
+-   **フロントエンド**: React, Vite, ethers.js, Tailwind CSS (CSSは今後導入予定)
+-   **テスト**: Chai, Mocha (Hardhat Toolbox)
 
 ## ディレクトリ構成
 
 ```
-contracts/          Solidity コントラクト
-scripts/            デプロイスクリプト
-simple-vote-ui/     フロントエンド
+contracts/          Solidity で書かれたスマートコントラクト
+scripts/            デプロイ用スクリプト
+test/               コントラクトのテストコード
+simple-vote-ui/     React 製フロントエンド
 ```
 
 ## 事前準備
 
-1. Node.js 18 以上をインストールしてください。
-2. ルートに `.env` ファイルを作成し、以下を設定します。
+1.  Node.js 18 以上をインストールしてください。
+2.  リポジトリのルートに `.env` ファイルを作成し、以下の内容を参考に設定します。
 
 ```
-API_URL=<RPC エンドポイント>
-PRIVATE_KEY=<デプロイに使用する秘密鍵>
+# Polygon Amoy テストネットなど、接続したいネットワークの RPC エンドポイント
+API_URL="https://rpc-amoy.polygon.technology/"
+
+# コントラクトのデプロイに使用するアカウントの秘密鍵
+PRIVATE_KEY="YOUR_PRIVATE_KEY"
 ```
 
 ## セットアップ
+
+プロジェクト全体の依存パッケージをインストールします。
 
 ```bash
 npm install
 ```
 
-## コンパイル・テスト
+## コンパイルとテスト
+
+Solidity のコードをコンパイルし、テストを実行します。
 
 ```bash
+# コンパイル
 npm run compile
+
+# テスト
 npm test
 ```
 
-## コントラクトデプロイ
+## コントラクトのデプロイ
 
-このリポジトリでは Polygon の Amoy テストネットを `amoy` ネットワークとして設定しています。
-`.env` には Amoy の RPC URL とデプロイに使用する秘密鍵を入力してください。
-準備ができたら以下のコマンドでデプロイを実行します。
+このリポジトリでは Polygon の Amoy テストネットを `amoy` ネットワークとして設定済みです。`.env` ファイルに必要な情報を設定した後、以下のコマンドでデプロイを実行します。
 
 ```bash
 npx hardhat run scripts/deploy.js --network amoy
 ```
 
+> **Note**
+> デプロイに成功すると、`PollManager` と `MockERC20` のコントラクトアドレスが `simple-vote-ui/src/constants.js` に自動で書き込まれ、フロントエンドと連携できるようになります。
+
 ## フロントエンドの起動
+
+フロントエンドのディレクトリに移動し、依存パッケージのインストールと開発サーバーの起動を行います。
 
 ```bash
 cd simple-vote-ui
@@ -59,96 +82,20 @@ npm install
 npm run dev
 ```
 
-ブラウザで表示された URL にアクセスすると、Metamask 等のウォレットを使ってコントラクトを操作できます。`npm run lint` で ESLint を実行できます。
+ブラウザで表示された URL（例: `http://localhost:5173/`）にアクセスすると、MetaMask 等のウォレットを接続してコントラクトを操作できます。
 
 ## 使い方
 
-1. 上記の手順でフロントエンドを起動したら、表示された URL をブラウザで開きます。
-2. 「ウォレット接続」ボタンを押して MetaMask などのウォレットと接続します。
-3. 投票したい選択肢を選び、「投票する」をクリックします。
-4. 投票済みの場合は「取消」ボタンで取り消せます。
-5. WeightedVote の画面では、投票前にトークン量を入力して「Approve」を実行してください。
+1.  フロントエンドを起動し、表示された URL をブラウザで開きます。
+2.  「ウォレット接続」ボタンを押して MetaMask などのウォレットと接続します。
+3.  「新規作成」から `DynamicVote` または `WeightedVote` の議題を作成します。
+4.  作成した議題を選択し、投票画面に遷移します。
+5.  投票したい選択肢を選び、「投票する」をクリックします。
+    -   `WeightedVote` の場合は、投票前にトークン量を入力して「Approve」を実行してください。
+6.  投票済みの場合は「取消」ボタンで投票を取り消せます。
 
-<!-- スクリーンショット挿入位置 -->
 ![操作画面](docs/screenshot-usage.png)
 
 ## ライセンス
 
 本プロジェクトは MIT ライセンスの下で公開されています。
-=======
-# SimpleVote
-
-簡単な投票システムを学習用にまとめたリポジトリです。Hardhat で Solidity コントラクトを管理し、React 製のフロントエンドから投票を行います。
-
-## 特徴
-
-- **DynamicVote**: 選択肢を後から追加できる投票コントラクト
-- **WeightedVote**: ERC20 トークンを預けて投票数に重み付けを行う拡張版
-- **simple-vote-ui**: 上記コントラクトを操作する React アプリ
-
-## ディレクトリ構成
-
-```
-contracts/          Solidity コントラクト
-scripts/            デプロイスクリプト
-simple-vote-ui/     フロントエンド
-```
-
-## 事前準備
-
-1. Node.js 18 以上をインストールしてください。
-2. ルートに `.env` ファイルを作成し、以下を設定します。
-
-```
-API_URL=<RPC エンドポイント>
-PRIVATE_KEY=<デプロイに使用する秘密鍵>
-```
-
-## セットアップ
-
-```bash
-npm install
-```
-
-## コンパイル・テスト
-
-```bash
-npm run compile
-npm test
-```
-
-## コントラクトデプロイ
-
-このリポジトリでは Polygon の Amoy テストネットを `amoy` ネットワークとして設定しています。
-`.env` には Amoy の RPC URL とデプロイに使用する秘密鍵を入力してください。
-準備ができたら以下のコマンドでデプロイを実行します。
-
-```bash
-npx hardhat run scripts/deploy.js --network amoy
-```
-
-## フロントエンドの起動
-
-```bash
-cd simple-vote-ui
-npm install
-npm run dev
-```
-
-ブラウザで表示された URL にアクセスすると、Metamask 等のウォレットを使ってコントラクトを操作できます。`npm run lint` で ESLint を実行できます。
-
-## 使い方
-
-1. 上記の手順でフロントエンドを起動したら、表示された URL をブラウザで開きます。
-2. 「ウォレット接続」ボタンを押して MetaMask などのウォレットと接続します。
-3. 投票したい選択肢を選び、「投票する」をクリックします。
-4. 投票済みの場合は「取消」ボタンで取り消せます。
-5. WeightedVote の画面では、投票前にトークン量を入力して「Approve」を実行してください。
-
-<!-- スクリーンショット挿入位置 -->
-![操作画面](docs/screenshot-usage.png)
-
-## ライセンス
-
-本プロジェクトは MIT ライセンスの下で公開されています。
->>>>>>> main
