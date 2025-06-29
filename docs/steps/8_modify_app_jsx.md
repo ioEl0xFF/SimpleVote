@@ -1,3 +1,17 @@
+# Step 8: simple-vote-ui/src/App.jsx の変更
+
+このステップでは、`simple-vote-ui/src/App.jsx` ファイルを変更し、`PollRegistry` の導入に伴う変更を反映させます。具体的には、選択された投票の `address` の代わりに `pollId` を使用するように変更し、各投票タイプへの遷移ロジックを調整します。
+
+## 8.1. 変更内容
+
+`simple-vote-ui/src/App.jsx` を開き、以下の変更を行います。
+
+1.  `DynamicVote` と `WeightedVote` コンポーネントへの `address` プロップの代わりに `pollId` プロップを渡すように変更します。
+2.  `selected` ステートの構造が `PollList.jsx` から返される新しい構造（`id`, `type`, `topic` などを含むオブジェクト）に対応するようにします。
+
+```javascript
+// simple-vote-ui/src/App.jsx
+
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import Toast from './Toast.jsx';
@@ -11,7 +25,7 @@ function App() {
     const [signer, setSigner] = useState(null);
     const [account, setAccount] = useState('');
     const [page, setPage] = useState('list');
-    const [selected, setSelected] = useState(null);
+    const [selected, setSelected] = useState(null); // selected は { id, type, topic, ... } のオブジェクトになる
     const [toasts, setToasts] = useState([]);
 
     // トースト表示用
@@ -62,35 +76,36 @@ function App() {
                 />
             );
         }
-        if (page === 'dynamic' && selected) {
-            return (
-                <DynamicVote
-                    signer={signer}
-                    pollId={selected.id} // address の代わりに pollId を渡す
-                    showToast={showToast}
-                    onBack={() => setPage('list')}
-                />
-            );
-        }
-        if (page === 'weighted' && selected) {
-            return (
-                <WeightedVote
-                    signer={signer}
-                    pollId={selected.id} // address の代わりに pollId を渡す
-                    showToast={showToast}
-                    onBack={() => setPage('list')}
-                />
-            );
-        }
-        if (page === 'simple' && selected) { // SimpleVote の追加
-            return (
-                <SimpleVote
-                    signer={signer}
-                    pollId={selected.id}
-                    showToast={showToast}
-                    onBack={() => setPage('list')}
-                />
-            );
+        // selected.type に応じて適切なコンポーネントをレンダリング
+        if (selected) {
+            if (selected.type === 'dynamic') {
+                return (
+                    <DynamicVote
+                        signer={signer}
+                        pollId={selected.id} // address の代わりに pollId を渡す
+                        showToast={showToast}
+                        onBack={() => setPage('list')}
+                    />
+                );
+            } else if (selected.type === 'weighted') {
+                return (
+                    <WeightedVote
+                        signer={signer}
+                        pollId={selected.id} // address の代わりに pollId を渡す
+                        showToast={showToast}
+                        onBack={() => setPage('list')}
+                    />
+                );
+            } else if (selected.type === 'simple') { // SimpleVote の追加
+                return (
+                    <SimpleVote
+                        signer={signer}
+                        pollId={selected.id}
+                        showToast={showToast}
+                        onBack={() => setPage('list')}
+                    />
+                );
+            }
         }
         return (
             <PollListPage
@@ -142,3 +157,4 @@ function App() {
 }
 
 export default App;
+```

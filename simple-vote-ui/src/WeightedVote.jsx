@@ -1,16 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import {
-    WEIGHTED_VOTE_ABI,
+    POLL_REGISTRY_ABI,
+    POLL_REGISTRY_ADDRESS,
     ERC20_ABI,
+    ZERO, // ZERO をインポート
 } from './constants';
 
 // WeightedVote コントラクト用の汎用コンポーネント
 
 // 指定アドレスの WeightedVote を操作
-function WeightedVote({ signer, address, showToast, onBack }) {
-    const [contract, setContract] = useState(null);
-    const [token, setToken] = useState(null);
+function WeightedVote({ signer, pollId, showToast, onBack }) { // address から pollId に変更
+    const [registry, setRegistry] = useState(null); // contract から registry に変更
+    const [tokenContract, setTokenContract] = useState(null); // token から tokenContract に変更
     const [topic, setTopic] = useState('');
     const [choices, setChoices] = useState([]);
     const [selected, setSelected] = useState(null);
@@ -19,71 +21,70 @@ function WeightedVote({ signer, address, showToast, onBack }) {
     const [txPending, setTxPending] = useState(false);
     const [start, setStart] = useState(0);
     const [end, setEnd] = useState(0);
+    const [tokenAddress, setTokenAddress] = useState(ZERO); // tokenAddress ステートを追加
 
     // signer が変わったらコントラクトを初期化
     useEffect(() => {
-        if (!signer || !address || address === '0x0000000000000000000000000000000000000000') return;
-        const vote = new ethers.Contract(address, WEIGHTED_VOTE_ABI, signer);
-        setContract(vote);
-        (async () => {
-            const tokenAddr = await vote.token();
-            const tok = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
-            setToken(tok);
-        })();
-    }, [signer, address]);
+        if (!signer || POLL_REGISTRY_ADDRESS === ZERO) return; // address から POLL_REGISTRY_ADDRESS に変更
+        const r = new ethers.Contract(POLL_REGISTRY_ADDRESS, POLL_REGISTRY_ABI, signer); // WEIGHTED_VOTE_ABI から POLL_REGISTRY_ABI に変更
+        setRegistry(r);
+    }, [signer]);
 
     // 投票状況を取得
     const fetchData = useCallback(async () => {
-        if (!contract) return;
-        setTopic(await contract.topic());
-        const s = Number(await contract.startTime());
-        const e = Number(await contract.endTime());
-        setStart(s);
-        setEnd(e);
-        const count = await contract.choiceCount();
+        if (!registry || pollId === undefined) return; // contract から registry に変更, address から pollId に変更
+        try {
+            const [, , , topic, startTime, endTime, choiceNames, voteCounts, tokenAddr] = await registry.getPoll(pollId);
+            setTopic(topic);
+            setStart(Number(startTime));
+            setEnd(Number(endTime));
+            setTokenAddress(tokenAddr); // tokenAddress を設定
 
-        // 各選択肢の取得を並列で実行し、読み込み時間を短縮
-        const promises = [];
-        for (let i = 1n; i <= count; i++) {
-            promises.push(
-                Promise.all([contract.choice(i), contract.voteCount(i)]).then(
-                    ([name, votes]) => ({
-                        id: Number(i),
-                        name,
-                        votes: ethers.formatEther(votes), // 18 桁精度を Ether 表記に変換
-                    }),
-                ),
-            );
-        }
-        const arr = await Promise.all(promises);
-        setChoices(arr);
+            const arr = choiceNames.map((name, idx) => ({
+                id: idx + 1,
+                name: name,
+                votes: ethers.formatEther(voteCounts[idx]), // 18 桁精度を Ether 表記に変換
+            }));
+            setChoices(arr);
 
-        if (signer) {
-            const addr = await signer.getAddress();
-            const id = await contract.votedChoiceId(addr);
-            setVotedId(Number(id));
+            if (signer) {
+                const addr = await signer.getAddress();
+                const id = await registry.getVotedChoiceId(pollId, addr); // contract から registry に変更, pollId を追加
+                setVotedId(Number(id));
+            }
+
+            // トークンコントラクトの初期化
+            if (tokenAddr !== ZERO && !tokenContract) {
+                const tok = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+                setTokenContract(tok);
+            }
+
+        } catch (err) {
+            console.error("Failed to fetch poll data:", err);
+            showToast(`エラー: ${err.shortMessage ?? err.message}`);
         }
-    }, [contract, signer]);
+    }, [registry, pollId, signer, showToast, tokenContract]); // contract から registry に変更, address から pollId に変更
 
     // 初期化とイベント購読
     useEffect(() => {
-        if (!contract) return;
+        if (!registry) return; // contract から registry に変更
         fetchData();
-        contract.on('VoteCast', fetchData);
-        contract.on('VoteCancelled', fetchData);
+        // PollRegistry のイベントを購読
+        registry.on('VoteCast', fetchData);
+        registry.on('VoteCancelled', fetchData);
         return () => {
-            contract.off('VoteCast', fetchData);
-            contract.off('VoteCancelled', fetchData);
+            registry.off('VoteCast', fetchData);
+            registry.off('VoteCancelled', fetchData);
         };
-    }, [contract, fetchData]);
+    }, [registry, fetchData]); // contract から registry に変更
 
     // トークンの承認
     const approve = async () => {
-        if (!token || !amount) return;
+        if (!tokenContract || !amount || tokenAddress === ZERO) return; // token から tokenContract に変更
         const value = ethers.parseEther(amount);
         showToast('トランザクション承認待ち…');
         try {
-            const tx = await token.approve(address, value);
+            const tx = await tokenContract.approve(POLL_REGISTRY_ADDRESS, value); // address から POLL_REGISTRY_ADDRESS に変更
             await tx.wait();
             showToast('承認が完了しました');
         } catch (err) {
@@ -93,12 +94,12 @@ function WeightedVote({ signer, address, showToast, onBack }) {
 
     // 投票処理
     const vote = async () => {
-        if (!contract || selected === null || !amount) return;
+        if (!registry || selected === null || !amount) return; // contract から registry に変更
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             const value = ethers.parseEther(amount);
-            const tx = await contract.vote(selected, value);
+            const tx = await registry.vote(pollId, selected, value); // pollId を追加
             await tx.wait();
             await fetchData();
             showToast('投票が完了しました');
@@ -111,11 +112,11 @@ function WeightedVote({ signer, address, showToast, onBack }) {
 
     // 投票取消
     const cancelVote = async () => {
-        if (!contract) return;
+        if (!registry) return; // contract から registry に変更
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            const tx = await contract.cancelVote();
+            const tx = await registry.cancelVote(pollId); // pollId を追加
             await tx.wait();
             await fetchData();
             showToast('投票を取り消しました');
@@ -127,11 +128,11 @@ function WeightedVote({ signer, address, showToast, onBack }) {
     };
 
     // コントラクトが未設定なら簡易メッセージを表示
-    if (!address || address === '0x0000000000000000000000000000000000000000') {
+    if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) {
         return (
             <section className="flex flex-col items-center gap-4 mt-10">
                 <h2 className="text-2xl font-bold">WeightedVote DApp</h2>
-                <p>コントラクトがデプロイされていません</p>
+                <p>PollRegistry コントラクトアドレスが未設定か、Poll ID が無効です</p>
             </section>
         );
     }
@@ -179,7 +180,7 @@ function WeightedVote({ signer, address, showToast, onBack }) {
                     type="button"
                     className="px-4 py-2 rounded-xl bg-green-500 text-white disabled:opacity-50"
                     onClick={approve}
-                    disabled={!amount || selected === null || votedId !== 0}
+                    disabled={!amount || selected === null || votedId !== 0 || tokenAddress === ZERO}
                 >
                     Approve
                 </button>

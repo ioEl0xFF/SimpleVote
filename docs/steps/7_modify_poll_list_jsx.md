@@ -1,3 +1,20 @@
+# Step 7: simple-vote-ui/src/PollList.jsx の変更
+
+このステップでは、`simple-vote-ui/src/PollList.jsx` ファイルを変更し、`PollManager` の代わりに新しい `PollRegistry` コントラクトから投票の一覧を取得するようにします。また、各投票の詳細情報を取得し、表示に反映させます。
+
+## 7.1. 変更内容
+
+`simple-vote-ui/src/PollList.jsx` を開き、以下の変更を行います。
+
+1.  インポート文を更新し、`POLL_MANAGER_ABI` と `POLL_MANAGER_ADDRESS` を `POLL_REGISTRY_ABI` と `POLL_REGISTRY_ADDRESS` に変更します。`WEIGHTED_VOTE_ABI` は不要になります。
+2.  `useEffect` フック内で `PollManager` の代わりに `PollRegistry` を初期化するように変更します。
+3.  `fetch` 関数内で、`manager.getPolls()` の代わりに `registry.getPolls()` を呼び出します。`getPolls` は `pollId`, `pollType`, `owner`, `topic` の配列を返すように変更されているため、それらを適切に処理します。
+4.  各投票の詳細情報を取得するために、`registry.getPoll(pollId)` を呼び出します。
+5.  `PollCreated` イベントを購読するように変更します。
+
+```javascript
+// simple-vote-ui/src/PollList.jsx
+
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import {
@@ -40,19 +57,19 @@ function PollList({ signer, onSelect }) {
                     const topic = topics[i];
 
                     // 各投票の詳細情報を取得
-                    const [, , , , start, end, choiceNames, voteCounts] = await registry.getPoll(pollId);
+                    const [id, type, , , start, end, choiceNames, voteCounts] = await registry.getPoll(pollId);
 
                     let typeString;
-                    if (pollType === 0n) {
+                    if (type === 0) {
                         typeString = 'dynamic';
-                    } else if (pollType === 1n) {
+                    } else if (type === 1) {
                         typeString = 'weighted';
-                    } else if (pollType === 2n) {
+                    } else if (type === 2) {
                         typeString = 'simple';
                     }
 
                     list.push({
-                        id: Number(pollId),
+                        id: Number(id),
                         type: typeString,
                         owner: owner,
                         topic: topic,
@@ -106,3 +123,4 @@ function PollList({ signer, onSelect }) {
 }
 
 export default PollList;
+```
