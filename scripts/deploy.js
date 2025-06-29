@@ -13,7 +13,8 @@ const getAbi = (contractName) => {
         const json = JSON.parse(file);
         return json.abi;
     } catch (e) {
-        console.log(`e`, e);
+        console.log(`Error getting ABI for ${contractName}:`, e);
+        return []; // エラー時は空の配列を返す
     }
 };
 
@@ -26,7 +27,14 @@ async function main() {
     await manager.waitForDeployment();
     console.log('PollManager deployed to:', manager.target);
 
-    // フロントエンドのアドレス書き換え設定
+    // WeightedVote 用のトークンをデプロイ
+    const token = await Token.deploy('VoteToken', 'VTK');
+    await token.waitForDeployment();
+    const [deployer] = await hre.ethers.getSigners();
+    await token.mint(deployer.address, hre.ethers.parseEther('1000'));
+    console.log('VoteToken deployed to:', token.target);
+
+    // フロントエンドの constants.js のパス
     const constantsPath = path.join(
         __dirname,
         '..',
@@ -35,44 +43,28 @@ async function main() {
         'constants.js'
     );
 
-    // ファイルを読み込み後でアドレスを書き換える関数
-    const updateConstant = (content, key, value) => {
-        const regex = new RegExp(`export const ${key} = ('|")[^'"]*('|");`);
-        return content.replace(regex, `export const ${key} = '${value}';`);
-    };
+    // constants.js の内容を生成
+    // 既存の constants.js の構造を維持し、必要な部分のみ更新する
+    const constantsContent = `
+export const DYNAMIC_VOTE_ABI = ${JSON.stringify(getAbi('DynamicVote'), null, 4)};
 
-    // ABI を書き換える関数
-    const updateAbi = (content, key, abi) => {
-        const abiString = JSON.stringify(abi, null, 4);
-        const regex = new RegExp(`export const ${key} = \[\s*.*\];`, 's');
-        return content.replace(regex, `export const ${key} = ${abiString};`);
-    };
+export const WEIGHTED_VOTE_ABI = ${JSON.stringify(getAbi('WeightedVote'), null, 4)};
 
-    let data = fs.readFileSync(constantsPath, 'utf8');
-    data = updateConstant(data, 'POLL_MANAGER_ADDRESS', manager.target);
-    fs.writeFileSync(constantsPath, data);
-    console.log('Updated POLL_MANAGER_ADDRESS in constants.js');
+export const POLL_MANAGER_ABI = ${JSON.stringify(getAbi('PollManager'), null, 4)};
 
-    // WeightedVote 用のトークンをデプロイ
-    const token = await Token.deploy('VoteToken', 'VTK');
-    await token.waitForDeployment();
-    const [deployer] = await hre.ethers.getSigners();
-    await token.mint(deployer.address, hre.ethers.parseEther('1000'));
+export const ERC20_ABI = ${JSON.stringify(getAbi('MockERC20'), null, 4)};
 
-    console.log('VoteToken deployed to:', token.target);
+export const POLL_MANAGER_ADDRESS = '${manager.target}';
 
-    // 生成したアドレスをフロントエンドに反映
-    data = fs.readFileSync(constantsPath, 'utf8');
-    data = updateConstant(data, 'MOCK_ERC20_ADDRESS', token.target);
+export const MOCK_ERC20_ADDRESS = '${token.target}';
 
-    // ABI を反映
-    data = updateAbi(data, 'POLL_MANAGER_ABI', getAbi('PollManager'));
-    data = updateAbi(data, 'DYNAMIC_VOTE_ABI', getAbi('DynamicVote'));
-    data = updateAbi(data, 'WEIGHTED_VOTE_ABI', getAbi('WeightedVote'));
-    data = updateAbi(data, 'ERC20_ABI', getAbi('MockERC20'));
+// These addresses are not updated by deploy.js as they are dynamically created by PollManager
+export const DYNAMIC_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
+export const WEIGHTED_VOTE_ADDRESS = '0x0000000000000000000000000000000000000000';
+`;
 
-    fs.writeFileSync(constantsPath, data);
-    console.log('Updated vote addresses and ABIs in constants.js');
+    fs.writeFileSync(constantsPath, constantsContent);
+    console.log('Updated constants.js with new addresses and ABIs.');
 }
 
 main().catch((error) => {

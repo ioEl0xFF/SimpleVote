@@ -15,8 +15,8 @@ contract PollManager {
     event WeightedCreated(address indexed poll, address token);
 
     /// @notice 作成済み議題のアドレスを配列で取得します
-    function getPolls() external view returns (address[] memory list) {
-        list = _polls;
+    function getPolls() public view returns (address[] memory) {
+        return _polls;
     }
 
     /// @notice DynamicVote をデプロイします

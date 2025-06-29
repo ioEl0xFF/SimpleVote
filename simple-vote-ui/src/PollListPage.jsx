@@ -1,7 +1,7 @@
 import PollList from './PollList.jsx';
 
 // Poll 一覧ページ
-function PollListPage({ signer, onSelect, onCreate }) {
+function PollListPage({ signer, onSelect, onCreate, showToast }) {
     return (
         <div className="flex flex-col gap-4 mt-4">
             <div className="flex gap-2">
@@ -12,7 +12,7 @@ function PollListPage({ signer, onSelect, onCreate }) {
                     新規作成
                 </button>
             </div>
-            <PollList signer={signer} onSelect={onSelect} />
+            <PollList signer={signer} onSelect={onSelect} showToast={showToast} />
         </div>
     );
 }
