@@ -1,3 +1,21 @@
+# Step 9: simple-vote-ui/src/DynamicVote.jsx の変更
+
+このステップでは、`simple-vote-ui/src/DynamicVote.jsx` ファイルを変更し、個別の `DynamicVote` コントラクトではなく、`PollRegistry` コントラクトと連携するようにします。これにより、単一の `PollRegistry` コントラクトを通じて投票の操作を行います。
+
+## 9.1. 変更内容
+
+`simple-vote-ui/src/DynamicVote.jsx` を開き、以下の変更を行います。
+
+1.  インポート文を更新し、`DYNAMIC_VOTE_ABI` を削除し、`POLL_REGISTRY_ABI` と `POLL_REGISTRY_ADDRESS` をインポートします。
+2.  `contract` ステートを `registry` に変更し、`PollRegistry` コントラクトのインスタンスを保持するようにします。
+3.  `useEffect` フック内で `PollRegistry` を初期化するように変更します。
+4.  `fetchData` 関数内で、`registry.getPoll(pollId)` を呼び出して投票の詳細情報を取得するように変更します。`votedChoiceId` も `registry.getVotedChoiceId(pollId, addr)` から取得します。
+5.  `vote` 関数と `cancelVote` 関数内で、`contract.vote` および `contract.cancelVote` の呼び出しを `registry.vote` および `registry.cancelVote` の呼び出しに置き換え、`pollId` を引数として渡します。
+6.  イベント購読を `PollCreated`, `VoteCast`, `VoteCancelled` に変更し、`PollRegistry` のイベントをリッスンするようにします。
+
+```javascript
+// simple-vote-ui/src/DynamicVote.jsx
+
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS } from './constants';
@@ -24,7 +42,7 @@ function DynamicVote({ signer, pollId, showToast, onBack }) { // address から 
     const fetchData = useCallback(async () => {
         if (!registry || pollId === undefined) return; // contract から registry に変更, address から pollId に変更
         try {
-            const [, , , topic, startTime, endTime, choiceNames, voteCounts] = await registry.getPoll(pollId);
+            const [id, pollType, owner, topic, startTime, endTime, choiceNames, voteCounts, tokenAddress, depositedAmount] = await registry.getPoll(pollId);
             setTopic(topic);
             setStart(Number(startTime));
             setEnd(Number(endTime));
@@ -91,7 +109,7 @@ function DynamicVote({ signer, pollId, showToast, onBack }) { // address から 
         }
     };
 
-    if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) {
+    if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) { // address から POLL_REGISTRY_ADDRESS に変更, pollId を追加
         return (
             <section className="flex flex-col items-center gap-4 mt-10">
                 <p>PollRegistry コントラクトアドレスが未設定か、Poll ID が無効です</p>
@@ -165,3 +183,4 @@ function DynamicVote({ signer, pollId, showToast, onBack }) { // address から 
 }
 
 export default DynamicVote;
+```

@@ -1,3 +1,20 @@
+# Step 6: simple-vote-ui/src/PollCreate.jsx の変更
+
+このステップでは、`simple-vote-ui/src/PollCreate.jsx` ファイルを変更し、新しい `PollRegistry` コントラクトの `createPoll` 関数を呼び出すようにします。これにより、単一のコントラクトで異なる種類の投票を作成できるようになります。
+
+## 6.1. 変更内容
+
+`simple-vote-ui/src/PollCreate.jsx` を開き、以下の変更を行います。
+
+1.  インポート文を更新し、`POLL_MANAGER_ABI` と `POLL_MANAGER_ADDRESS` を `POLL_REGISTRY_ABI` と `POLL_REGISTRY_ADDRESS` に変更します。
+2.  `useEffect` フック内で `PollManager` の代わりに `PollRegistry` を初期化するように変更します。
+3.  `submit` 関数内で、`manager.createWeightedVote` および `manager.createDynamicVote` の呼び出しを `manager.createPoll` の呼び出しに置き換えます。
+4.  `createPoll` 関数に渡す引数を、`PollRegistry.sol` の `createPoll` 関数定義に合わせて調整します。特に、`pollType` と `_tokenAddress` の扱いを注意深く変更します。
+5.  イベントのログ解析部分も `PollCreated` イベントを検出するように変更します。
+
+```javascript
+// simple-vote-ui/src/PollCreate.jsx
+
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import {
@@ -191,7 +208,7 @@ function PollCreate({ signer, onCreated, showToast, onBack }) {
                         className="border px-2 py-1"
                         value={c}
                         onChange={(e) => updateChoice(i, e.target.value)}
-                        required={i < 2}
+                        required={i < 2} // 少なくとも2つの選択肢を必須とする
                     />
                 ))}
                 <button
