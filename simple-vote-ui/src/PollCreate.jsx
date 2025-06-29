@@ -119,8 +119,7 @@ function PollCreate({ signer, onCreated, showToast, onBack }) {
                 showToast('作成された議題のアドレス取得に失敗しました');
                 return;
             }
-            const addr = event.args.poll;
-            showToast('議題を作成しました');
+            showToast(`議題を作成しました: ${event.args.poll}`);
             if (onCreated) onCreated();
         } catch (err) {
             console.error('投票作成エラー', err);
