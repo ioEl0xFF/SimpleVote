@@ -44,14 +44,14 @@ async function main() {
     // ABI を書き換える関数
     const updateAbi = (content, key, abi) => {
         const abiString = JSON.stringify(abi, null, 4);
-        const regex = new RegExp(`export const ${key} = \[\s*.*\];`, 's');
+        const regex = new RegExp(`export const ${key} = \[\\s\\S*\];`, 's');
         return content.replace(regex, `export const ${key} = ${abiString};`);
     };
 
     let data = fs.readFileSync(constantsPath, 'utf8');
     data = updateConstant(data, 'POLL_REGISTRY_ADDRESS', registry.target);
     fs.writeFileSync(constantsPath, data);
-    console.log('Updated POLL_MANAGER_ADDRESS in constants.js');
+    console.log('Updated POLL_REGISTRY_ADDRESS in constants.js');
 
     // WeightedVote 用のトークンをデプロイ
     const token = await Token.deploy('VoteToken', 'VTK');

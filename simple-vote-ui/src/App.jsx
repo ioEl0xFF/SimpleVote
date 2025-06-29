@@ -100,6 +100,7 @@ function App() {
                     setPage(p.type); // p.type は 'dynamic', 'weighted', 'simple' のいずれか
                 }}
                 onCreate={() => setPage('create')}
+                showToast={showToast}
             />
         );
     };
