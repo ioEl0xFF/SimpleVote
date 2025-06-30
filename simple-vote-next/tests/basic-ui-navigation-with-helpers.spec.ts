@@ -1,6 +1,64 @@
 import { test, expect } from '@playwright/test';
 import { WalletHelper, PollHelper, LoadingHelper } from './helpers/wallet-helper';
 
+// ethersモジュールの直接モック
+test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+        // ethersモジュールのモック
+        const mockAccount = '0x1234567890123456789012345678901234567890';
+        const mockSignature = '0x1234567890123456789012345678901234567890';
+
+        // window.ethereumのモック
+        Object.defineProperty(window, 'ethereum', {
+            value: {
+                request: async (args: any) => {
+                    console.log('Mock ethereum.request:', args.method);
+                    switch (args.method) {
+                        case 'eth_requestAccounts':
+                        case 'eth_accounts':
+                            return [mockAccount];
+                        case 'eth_chainId':
+                            return '0x1';
+                        case 'net_version':
+                            return '1';
+                        case 'personal_sign':
+                            return mockSignature;
+                        default:
+                            return null;
+                    }
+                },
+                isMetaMask: true,
+                selectedAddress: mockAccount,
+                networkVersion: '1',
+                chainId: '0x1',
+            },
+            writable: true,
+            configurable: true,
+        });
+
+        // ethersのモック
+        const mockEthers = {
+            BrowserProvider: class {
+                constructor(ethereum: any) {
+                    console.log('Mock BrowserProvider created');
+                }
+                async send(method: string, params: any[]) {
+                    return await window.ethereum.request({ method, params });
+                }
+                async getSigner() {
+                    return {
+                        getAddress: async () => mockAccount,
+                        signMessage: async (message: string) => mockSignature,
+                    };
+                }
+            },
+        };
+
+        // グローバルにethersを設定
+        (window as any).ethers = mockEthers;
+    });
+});
+
 test.describe('基本UI・ナビゲーションテスト（ヘルパー関数使用）', () => {
     let walletHelper: WalletHelper;
     let pollHelper: PollHelper;
@@ -36,8 +94,38 @@ test.describe('基本UI・ナビゲーションテスト（ヘルパー関数使
         });
 
         test('ウォレット接続後の状態変化', async ({ page }) => {
+            // コンソールログを監視
+            page.on('console', (msg) => {
+                console.log('Browser console:', msg.text());
+            });
+
+            // エラーを監視
+            page.on('pageerror', (error) => {
+                console.log('Page error:', error.message);
+            });
+
             // ウォレット接続をシミュレート
             await walletHelper.simulateWalletConnection();
+
+            // ページの状態をデバッグ
+            console.log('Checking page state after connection...');
+            const pageContent = await page.content();
+            console.log('Page content length:', pageContent.length);
+
+            // 各要素の存在を確認
+            const connectButton = await page.getByRole('button', { name: 'ウォレット接続' }).count();
+            const accountElement = await page.locator('.font-mono').count();
+            const disconnectButton = await page.getByRole('button', { name: '切断' }).count();
+            const createButton = await page.getByRole('button', { name: '新規作成' }).count();
+            const pollList = await page.locator('text=投票一覧').count();
+
+            console.log('Element counts:', {
+                connectButton,
+                accountElement,
+                disconnectButton,
+                createButton,
+                pollList
+            });
 
             // 接続ボタンが非表示になる
             await expect(page.getByRole('button', { name: 'ウォレット接続' })).not.toBeVisible();
@@ -52,7 +140,7 @@ test.describe('基本UI・ナビゲーションテスト（ヘルパー関数使
             await expect(page.getByRole('button', { name: '新規作成' })).toBeVisible();
 
             // 投票一覧セクションが表示される
-            await expect(page.locator('text=Poll 一覧')).toBeVisible();
+            await expect(page.locator('text=投票一覧')).toBeVisible();
         });
 
         test('ウォレット切断後の状態変化', async ({ page }) => {

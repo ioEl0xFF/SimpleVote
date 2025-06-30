@@ -11,44 +11,38 @@ export class WalletHelper {
     }
 
     /**
-     * ウォレット接続をシミュレート
+     * ウォレット接続をシミュレート（簡素化版）
      */
     async simulateWalletConnection(
         accountAddress: string = '0x1234567890123456789012345678901234567890'
     ) {
+        console.log('Simulating wallet connection...');
+
         // ウォレット接続ボタンをクリック
         await this.page.getByRole('button', { name: 'ウォレット接続' }).click();
 
-        // ウォレット接続後の状態をシミュレート
-        await this.page.evaluate((address) => {
-            // localStorageにウォレット接続状態を保存
-            localStorage.setItem('walletConnected', 'true');
-            localStorage.setItem('accountAddress', address);
+        // 接続プロセスが完了するまで待機
+        await this.page.waitForTimeout(2000);
 
-            // カスタムイベントを発火してコンポーネントに通知
-            window.dispatchEvent(
-                new CustomEvent('walletConnected', {
-                    detail: { address },
-                })
-            );
-        }, accountAddress);
+        // アカウントアドレスが表示されるまで待機
+        await this.page.waitForSelector('.font-mono', { timeout: 5000 });
+
+        console.log('Wallet connection simulation completed');
     }
 
     /**
      * ウォレット切断をシミュレート
      */
     async simulateWalletDisconnection() {
+        console.log('Simulating wallet disconnection...');
+
         // 切断ボタンをクリック
         await this.page.getByRole('button', { name: '切断' }).click();
 
-        // ウォレット切断後の状態をシミュレート
-        await this.page.evaluate(() => {
-            localStorage.removeItem('walletConnected');
-            localStorage.removeItem('accountAddress');
+        // 切断プロセスが完了するまで待機
+        await this.page.waitForTimeout(1000);
 
-            // カスタムイベントを発火してコンポーネントに通知
-            window.dispatchEvent(new CustomEvent('walletDisconnected'));
-        });
+        console.log('Wallet disconnection simulation completed');
     }
 
     /**
