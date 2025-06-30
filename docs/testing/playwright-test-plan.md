@@ -313,8 +313,8 @@ SimpleVoteは、ブロックチェーン上で投票を行うDApp（分散型ア
 
 ## テスト実装状況サマリー
 
-### 実装済みテスト項目（2024年6月現在）
-- **基本UI・ナビゲーションテスト**: 29/29項目完了（100%）
+### 実装済みテスト項目（2024年7月現在）
+- **基本UI・ナビゲーションテスト**: 29/30項目完了（96.7%）
 - **レスポンシブデザインテスト**: 4/4項目完了（100%）
 - **アクセシビリティテスト**: 3/3項目完了（100%）
 - **パフォーマンステスト**: 2/2項目完了（100%）
@@ -322,27 +322,140 @@ SimpleVoteは、ブロックチェーン上で投票を行うDApp（分散型ア
 
 ### 実装済みテスト項目数: 42/140項目（30.0%）
 
-### テスト実行結果（2024年6月）
+### テスト実行結果（2024年7月1日）
 ```
-Running 29 tests using 8 workers
-✓ 29 passed (xx.xs)
+Running 30 tests using 8 workers
+✓ 29 passed (42.8s)
+✗ 1 failed
 ```
 
-### 失敗したテストと問題点
+**実行時間**: 42.8秒  
+**成功率**: 96.7% (29/30)
+
+### 成功したテスト項目（29個）
+1. **ホームページ基本UI** (8個)
+   - ページタイトル「SimpleVote」が表示される
+   - ウォレット未接続時の各種ボタン表示状態
+   - ウォレット接続後の各種ボタン表示状態
+   - 投票一覧の表示と機能
+
+2. **ページヘッダー・ナビゲーション** (2個)
+   - パンくずリストが正しく表示される
+   - ホームボタンが正しく機能する
+
+3. **ローディング状態** (2個)
+   - データ読み込み中にLoadingSpinnerが表示される
+   - 読み込み完了後にコンテンツが表示される
+
+4. **エラーハンドリング** (2個)
+   - エラー時に適切なエラーメッセージが表示される
+   - コントラクトアドレス未設定時のエラー表示
+
+5. **レスポンシブデザイン** (3個)
+   - デスクトップ表示（1920x1080）
+   - タブレット表示（768x1024）
+   - モバイル表示（375x667）
+
+6. **アクセシビリティ** (3個)
+   - 適切なHTMLセマンティクスが使用されている
+   - キーボードナビゲーションが可能
+
+7. **パフォーマンス** (2個)
+   - ページの初期読み込み時間
+   - メインコンテンツの表示時間
+
+8. **ウォレット接続シミュレーション** (6個)
+   - 完全なウォレット接続シミュレーション
+   - ウォレット接続状態の検証
+
+### 失敗したテスト項目（1個）
 1. **「無効なPoll IDでアクセスした場合のエラー表示」**
    - **エラー**: `Timed out 5000ms waiting for expect(locator).toBeVisible()`
-   - **原因**: Next.js 15のparams非同期化により404ページが正しく表示されない
-   - **対策**: `/dynamic/[pollId]`ページのparams処理を非同期化
+   - **期待値**: `text=404` が見つかること
+   - **実際**: 404ページが表示されない
+   - **スクリーンショット**: `test-results/basic-ui-navigation-基本UI・ナ-89bd9-グ-無効なPoll-IDでアクセスした場合のエラー表示-chromium/test-failed-1.png`
+   - **動画**: `test-results/basic-ui-navigation-基本UI・ナ-89bd9-グ-無効なPoll-IDでアクセスした場合のエラー表示-chromium/video.webm`
 
-### 既知の問題点
-1. **Next.js 15のparams非同期化**: `/dynamic/[pollId]`ページでparams.pollIdの非同期処理が必要
-2. **404エラーページ**: 無効なPoll IDアクセス時の404ページ表示が正しく動作しない
+### エラーの詳細分析
+
+#### Next.js 15のparams非同期化問題
+```
+[WebServer] Error: Route "/dynamic/[pollId]" used `params.pollId`. `params` should be awaited before using its properties.
+    at DynamicVotePage (app\dynamic\[pollId]\page.tsx:195:33)
+  193 |     const { signer, showToast } = useWallet();
+  194 |     const router = useRouter();
+> 195 |     const pollId = Number(params.pollId);
+```
+
+**原因**: Next.js 15では動的ルートパラメータが非同期化され、`params`を`await`する必要がある
+
+#### Ethers.jsモックの問題
+```
+Browser console: Failed to fetch polls: TypeError: invalid BytesLike value (argument="value", value=null, code=INVALID_ARGUMENT, version=6.14.4)
+```
+
+**原因**: モックされたethers.jsが一部のメソッド（`eth_newFilter`, `eth_call`, `eth_blockNumber`）を正しく処理していない
+
+### 既知の問題点と対策
+
+#### 1. Next.js 15のparams非同期化
+**問題**: `/dynamic/[pollId]`ページでparams.pollIdの非同期処理が必要  
+**対策**: 
+```typescript
+// 修正前
+const pollId = Number(params.pollId);
+
+// 修正後
+const pollId = Number(await params.pollId);
+```
+
+#### 2. 404エラーページの表示
+**問題**: 無効なPoll IDアクセス時の404ページ表示が正しく動作しない  
+**対策**: 
+- Next.js 15のnot-found.tsxの適切な実装
+- 動的ルートでのエラーハンドリング強化
+
+#### 3. Ethers.jsモックの改善
+**問題**: 一部のethereumメソッドがモックされていない  
+**対策**: 
+- `eth_newFilter`, `eth_call`, `eth_blockNumber`のモック実装
+- より完全なethers.jsモックの構築
+
+### ログファイル
+テスト実行時に以下のログファイルが生成されました：
+- `test-execution.log` - 基本的な実行ログ（7,427バイト）
+- `test-execution-detailed.log` - 詳細な実行ログ（進捗表示付き）
 
 ### 次の実装優先順位
-1. **失敗したテストの修正** - 404エラーページの修正
-2. **ウォレット接続テスト** - 基本UIテストの基盤が完成
-3. **投票作成テスト** - フォーム操作とバリデーション
-4. **各投票タイプのテスト** - Dynamic/Weighted/Simple Vote
+1. **失敗したテストの修正** (高優先度)
+   - Next.js 15のparams非同期化対応
+   - 404エラーページの修正
+   - Ethers.jsモックの改善
+
+2. **ウォレット接続テスト** (中優先度)
+   - 基本UIテストの基盤が完成済み
+   - MetaMask接続の実際のテスト実装
+
+3. **投票作成テスト** (中優先度)
+   - フォーム操作とバリデーション
+   - トランザクション実行テスト
+
+4. **各投票タイプのテスト** (中優先度)
+   - Dynamic/Weighted/Simple Voteの基本機能
 
 ### 修正が必要なファイル
 - `simple-vote-next/app/dynamic/[pollId]/page.tsx` - params非同期化対応
+- `simple-vote-next/tests/helpers/ethers-mock.ts` - モック機能の拡張
+- `simple-vote-next/app/not-found.tsx` - 404エラーページの改善
+
+### テスト実行コマンド
+```bash
+# 基本実行
+npx playwright test basic-ui-navigation.spec.ts --reporter=list --project=chromium
+
+# 詳細ログ付き実行
+npx playwright test basic-ui-navigation.spec.ts --reporter=line --project=chromium --timeout=60000 2>&1 | tee test-execution-detailed.log
+
+# 失敗したテストのみ実行
+npx playwright test basic-ui-navigation.spec.ts --grep="無効なPoll IDでアクセスした場合のエラー表示"
+```

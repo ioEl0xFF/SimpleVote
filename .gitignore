@@ -88,3 +88,24 @@ public
 # Temporary folders
 tmp/
 temp/
+
+# Playwright test files
+/playwright-report/
+/test-results/
+/playwright/.cache/
+
+# Next.js specific files
+next-env.d.ts
+*.tsbuildinfo
+
+# SWC cache
+.swc/
+
+# Test execution logs
+test-execution*.log
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
