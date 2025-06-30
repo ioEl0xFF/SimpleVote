@@ -9,14 +9,14 @@ Solidity と React を使ったシンプルな投票（dApp）のサンプルプ
     -   `DynamicVote`: オーナーが選択肢を後から自由に追加できる、より柔軟な投票です。
     -   `WeightedVote`: `DynamicVote`を拡張し、ERC20 トークンを預けることで投票に重み付けができます。
 -   **投票管理コントラクト**:
-    -   `PollManager`: 上記の投票コントラクトを新規に生成し、一覧を管理します。
+    -   `PollRegistry`: 上記の投票コントラクトを新規に生成し、一覧を管理します。
 -   **React フロントエンド**:
-    -   `simple-vote-ui`: Vite で構築された React アプリケーションから、MetaMask を通じて各コントラクトを操作できます。
+    -   `simple-vote-next`: Next.js で構築された React アプリケーションから、MetaMask を通じて各コントラクトを操作できます。
 
 ## 技術スタック
 
 -   **スマートコントラクト**: Solidity, Hardhat, OpenZeppelin Contracts
--   **フロントエンド**: React, Vite, ethers.js, Tailwind CSS (CSSは今後導入予定)
+-   **フロントエンド**: React, Next.js, ethers.js, Tailwind CSS
 -   **テスト**: Chai, Mocha (Hardhat Toolbox)
 
 ## ディレクトリ構成
@@ -25,7 +25,7 @@ Solidity と React を使ったシンプルな投票（dApp）のサンプルプ
 contracts/          Solidity で書かれたスマートコントラクト
 scripts/            デプロイ用スクリプト
 test/               コントラクトのテストコード
-simple-vote-ui/     React 製フロントエンド
+simple-vote-next/   Next.js 製フロントエンド
 ```
 
 ## 事前準備
@@ -47,6 +47,8 @@ PRIVATE_KEY="YOUR_PRIVATE_KEY"
 
 ```bash
 npm install
+cd simple-vote-next
+npm install
 ```
 
 ## コンパイルとテスト
@@ -63,6 +65,22 @@ npm test
 
 ## コントラクトのデプロイ
 
+### ローカル開発環境
+
+ローカルで開発する場合は、まずHardhatノードを起動します：
+
+```bash
+npx hardhat node
+```
+
+別のターミナルでデプロイを実行します：
+
+```bash
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+### テストネットへのデプロイ
+
 このリポジトリでは Polygon の Amoy テストネットを `amoy` ネットワークとして設定済みです。`.env` ファイルに必要な情報を設定した後、以下のコマンドでデプロイを実行します。
 
 ```bash
@@ -70,19 +88,21 @@ npx hardhat run scripts/deploy.js --network amoy
 ```
 
 > **Note**
-> デプロイに成功すると、`PollManager` と `MockERC20` のコントラクトアドレスが `simple-vote-ui/src/constants.js` に自動で書き込まれ、フロントエンドと連携できるようになります。
+> デプロイに成功すると、以下の処理が自動で実行されます：
+> - `PollRegistry` と `MockERC20` のコントラクトアドレスが `simple-vote-next/lib/constants.ts` に自動更新
+> - 最新のABIが `constants.ts` に自動更新
+> - フロントエンドと連携できるようになります
 
 ## フロントエンドの起動
 
-フロントエンドのディレクトリに移動し、依存パッケージのインストールと開発サーバーの起動を行います。
+フロントエンドのディレクトリに移動し、開発サーバーの起動を行います。
 
 ```bash
-cd simple-vote-ui
-npm install
+cd simple-vote-next
 npm run dev
 ```
 
-ブラウザで表示された URL（例: `http://localhost:5173/`）にアクセスすると、MetaMask 等のウォレットを接続してコントラクトを操作できます。
+ブラウザで表示された URL（例: `http://localhost:3000/`）にアクセスすると、MetaMask 等のウォレットを接続してコントラクトを操作できます。
 
 ## 使い方
 
