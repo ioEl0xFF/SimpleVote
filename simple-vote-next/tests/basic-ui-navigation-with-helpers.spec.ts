@@ -1,62 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { WalletHelper, PollHelper, LoadingHelper } from './helpers/wallet-helper';
+import { setupEthersMock } from './helpers/ethers-mock';
 
-// ethersモジュールの直接モック
+// ethersモジュールの完全モックを設定
 test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-        // ethersモジュールのモック
-        const mockAccount = '0x1234567890123456789012345678901234567890';
-        const mockSignature = '0x1234567890123456789012345678901234567890';
-
-        // window.ethereumのモック
-        Object.defineProperty(window, 'ethereum', {
-            value: {
-                request: async (args: any) => {
-                    console.log('Mock ethereum.request:', args.method);
-                    switch (args.method) {
-                        case 'eth_requestAccounts':
-                        case 'eth_accounts':
-                            return [mockAccount];
-                        case 'eth_chainId':
-                            return '0x1';
-                        case 'net_version':
-                            return '1';
-                        case 'personal_sign':
-                            return mockSignature;
-                        default:
-                            return null;
-                    }
-                },
-                isMetaMask: true,
-                selectedAddress: mockAccount,
-                networkVersion: '1',
-                chainId: '0x1',
-            },
-            writable: true,
-            configurable: true,
-        });
-
-        // ethersのモック
-        const mockEthers = {
-            BrowserProvider: class {
-                constructor(ethereum: any) {
-                    console.log('Mock BrowserProvider created');
-                }
-                async send(method: string, params: any[]) {
-                    return await window.ethereum.request({ method, params });
-                }
-                async getSigner() {
-                    return {
-                        getAddress: async () => mockAccount,
-                        signMessage: async (message: string) => mockSignature,
-                    };
-                }
-            },
-        };
-
-        // グローバルにethersを設定
-        (window as any).ethers = mockEthers;
-    });
+    // ethers.jsの完全モックを設定
+    await setupEthersMock(page);
 });
 
 test.describe('基本UI・ナビゲーションテスト（ヘルパー関数使用）', () => {

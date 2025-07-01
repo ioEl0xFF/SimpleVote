@@ -31,6 +31,7 @@ body {
   top: 20px;
   right: 20px;
   z-index: 1000;
+  max-width: 400px;
 }
 
 .toast {
@@ -41,6 +42,22 @@ body {
   margin-bottom: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   animation: slideIn 0.3s ease-out;
+  word-wrap: break-word;
+}
+
+.toast-success {
+  background: #10b981;
+  color: white;
+}
+
+.toast-error {
+  background: #ef4444;
+  color: white;
+}
+
+.toast-info {
+  background: #3b82f6;
+  color: white;
 }
 
 @keyframes slideIn {

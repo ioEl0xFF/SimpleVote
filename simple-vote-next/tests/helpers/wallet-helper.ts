@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { setupEthersMock, simulateQuickWalletConnection } from './ethers-mock';
 
 /**
  * ウォレット接続状態をシミュレートするヘルパー関数
@@ -11,12 +12,21 @@ export class WalletHelper {
     }
 
     /**
-     * ウォレット接続をシミュレート（簡素化版）
+     * ウォレット接続をシミュレート（ethers-mock使用版）
      */
     async simulateWalletConnection(
         accountAddress: string = '0x1234567890123456789012345678901234567890'
     ) {
-        console.log('Simulating wallet connection...');
+        console.log('Simulating wallet connection with ethers-mock...');
+
+        // ethers.jsのモックを設定
+        await setupEthersMock(this.page);
+
+        // ページをリロードしてモックを適用
+        await this.page.reload();
+
+        // ウォレット接続ボタンが表示されるまで待機
+        await this.page.waitForSelector('button:has-text("ウォレット接続")', { timeout: 5000 });
 
         // ウォレット接続ボタンをクリック
         await this.page.getByRole('button', { name: 'ウォレット接続' }).click();
@@ -28,6 +38,13 @@ export class WalletHelper {
         await this.page.waitForSelector('.font-mono', { timeout: 5000 });
 
         console.log('Wallet connection simulation completed');
+    }
+
+    /**
+     * 高速なウォレット接続をシミュレート
+     */
+    async simulateQuickWalletConnection() {
+        await simulateQuickWalletConnection(this.page);
     }
 
     /**

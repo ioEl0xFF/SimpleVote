@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 /**
  * ethers.jsの完全モックを設定するヘルパー関数
@@ -10,6 +10,9 @@ export async function setupEthersMock(page: Page) {
         const mockSignature = '0x1234567890123456789012345678901234567890';
 
         console.log('Setting up complete ethers.js mock...');
+
+        // イベントリスナー管理用
+        const eventListeners: { [key: string]: any[] } = {};
 
         // window.ethereumの完全なモック
         Object.defineProperty(window, 'ethereum', {
@@ -32,6 +35,15 @@ export async function setupEthersMock(page: Page) {
                         case 'personal_sign':
                             console.log('Returning mock signature:', mockSignature);
                             return mockSignature;
+                        case 'eth_newFilter':
+                            console.log('Returning mock filter ID: 0x1');
+                            return '0x1';
+                        case 'eth_call':
+                            console.log('Mock eth_call with params:', args.params);
+                            return '0x0000000000000000000000000000000000000000000000000000000000000000';
+                        case 'eth_blockNumber':
+                            console.log('Returning mock block number: 0x123456');
+                            return '0x123456';
                         default:
                             console.log('Unknown method:', args.method);
                             return null;
@@ -39,9 +51,31 @@ export async function setupEthersMock(page: Page) {
                 },
                 on: (eventName: string, callback: any) => {
                     console.log('Mock ethereum.on called with:', eventName);
+                    if (!eventListeners[eventName]) {
+                        eventListeners[eventName] = [];
+                    }
+                    eventListeners[eventName].push(callback);
                 },
                 removeListener: (eventName: string, callback: any) => {
                     console.log('Mock ethereum.removeListener called with:', eventName);
+                    if (eventListeners[eventName]) {
+                        const index = eventListeners[eventName].indexOf(callback);
+                        if (index > -1) {
+                            eventListeners[eventName].splice(index, 1);
+                        }
+                    }
+                },
+                emit: (eventName: string, data: any) => {
+                    console.log('Mock ethereum.emit called with:', eventName, data);
+                    if (eventListeners[eventName]) {
+                        eventListeners[eventName].forEach((callback) => {
+                            try {
+                                callback(data);
+                            } catch (error) {
+                                console.error('Error in event listener:', error);
+                            }
+                        });
+                    }
                 },
                 isMetaMask: true,
                 selectedAddress: mockAccount,
@@ -181,73 +215,80 @@ export async function setupEthersMock(page: Page) {
 }
 
 /**
- * ウォレット接続プロセスを完全にシミュレートする関数
+ * ウォレット接続プロセスを完全にシミュレートする関数（最適化版）
  */
 export async function simulateCompleteWalletConnection(page: Page) {
-    console.log('Starting complete wallet connection simulation...');
-
-    // コンソールログを監視
-    page.on('console', (msg) => {
-        console.log('Browser console:', msg.text());
-    });
-
-    // エラーを監視
-    page.on('pageerror', (error) => {
-        console.log('Page error:', error.message);
-    });
+    console.log('Starting optimized wallet connection simulation...');
 
     // ethers.jsのモックを設定
     await setupEthersMock(page);
 
     // ページをリロードしてモックを適用
-    console.log('Reloading page to apply mock...');
     await page.reload();
 
-    // ウォレット接続ボタンが表示されるまで待機
-    console.log('Waiting for wallet connect button...');
-    await page.waitForSelector('button:has-text("ウォレット接続")', { timeout: 10000 });
+    // ウォレット接続ボタンが表示されるまで待機（タイムアウト短縮）
+    await page.waitForSelector('button:has-text("ウォレット接続")', { timeout: 5000 });
 
     // ウォレット接続ボタンをクリック
-    console.log('Clicking wallet connect button...');
     await page.getByRole('button', { name: 'ウォレット接続' }).click();
 
-    // 接続プロセスが完了するまで待機
-    console.log('Waiting for connection process to complete...');
-    await page.waitForTimeout(3000);
-
-    // ページの状態を確認
-    console.log('Checking page state after connection...');
-    const pageContent = await page.content();
-    console.log('Page content length:', pageContent.length);
+    // 接続プロセスが完了するまで待機（タイムアウト短縮）
+    await page.waitForTimeout(2000);
 
     // アカウントアドレスが表示されているかチェック
-    const accountElement = await page.locator('.font-mono').count();
-    console.log('Account elements found:', accountElement);
+    await page.waitForSelector('.font-mono', { timeout: 5000 });
 
-    console.log('Complete wallet connection simulation finished');
+    console.log('Optimized wallet connection simulation finished');
 }
 
 /**
- * ウォレット接続状態を検証する関数
+ * 高速なウォレット接続シミュレーション（最小限の検証）
+ */
+export async function simulateQuickWalletConnection(page: Page) {
+    console.log('Starting quick wallet connection simulation...');
+
+    // ethers.jsのモックを設定
+    await setupEthersMock(page);
+
+    // ページをリロードしてモックを適用
+    await page.reload();
+
+    // ウォレット接続ボタンをクリック
+    await page.getByRole('button', { name: 'ウォレット接続' }).click();
+
+    // 最小限の待機時間
+    await page.waitForTimeout(1000);
+
+    console.log('Quick wallet connection simulation finished');
+}
+
+/**
+ * トーストメッセージの検証ヘルパー（最適化版）
+ */
+export async function waitForToast(page: Page, expectedMessage: string, timeout = 3000) {
+    await page.waitForSelector('[data-testid="toast"]', { timeout });
+    const toast = page.locator('[data-testid="toast"]');
+    await expect(toast).toBeVisible();
+
+    const toastText = await toast.textContent();
+    expect(toastText).toContain(expectedMessage);
+
+    console.log('Toast message verified:', toastText);
+}
+
+/**
+ * ウォレット接続状態を検証する関数（最適化版）
  */
 export async function verifyWalletConnectionState(page: Page) {
-    console.log('Starting wallet connection state verification...');
+    console.log('Starting optimized wallet connection state verification...');
 
-    // アカウントアドレスが表示されることを確認
-    console.log('Waiting for account address to be visible...');
-    await page.waitForSelector('.font-mono', { timeout: 10000 });
+    // 並列で要素を待機
+    await Promise.all([
+        page.waitForSelector('.font-mono', { timeout: 5000 }),
+        page.waitForSelector('button:has-text("切断")', { timeout: 5000 }),
+        page.waitForSelector('button:has-text("新規作成")', { timeout: 5000 }),
+        page.waitForSelector('text=投票一覧', { timeout: 5000 }),
+    ]);
 
-    // 切断ボタンが表示されることを確認
-    console.log('Waiting for disconnect button to be visible...');
-    await page.waitForSelector('button:has-text("切断")', { timeout: 10000 });
-
-    // 新規作成ボタンが表示されることを確認
-    console.log('Waiting for create button to be visible...');
-    await page.waitForSelector('button:has-text("新規作成")', { timeout: 10000 });
-
-    // 投票一覧が表示されることを確認
-    console.log('Waiting for poll list to be visible...');
-    await page.waitForSelector('text=投票一覧', { timeout: 10000 });
-
-    console.log('Wallet connection state verified successfully');
+    console.log('Optimized wallet connection state verified successfully');
 }
