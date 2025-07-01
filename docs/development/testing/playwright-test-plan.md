@@ -51,10 +51,7 @@ SimpleVoteは、ブロックチェーン上で投票を行うDApp（分散型ア
 
 #### 1.4 エラーハンドリング
 - [x] エラー時に適切なエラーメッセージが表示される
-- [ ] 無効なPoll IDでアクセスした場合のエラー表示
-  - **問題**: 「404」テキストが見つからない
-  - **原因**: Next.js 15のparams非同期化により404ページが正しく表示されない
-  - **修正予定**: `/dynamic/[pollId]`ページのparams処理を非同期化
+- [x] 無効なPoll IDでアクセスした場合のエラー表示
 - [x] コントラクトアドレス未設定時のエラー表示
 
 ### 2. ウォレット接続テスト
@@ -313,26 +310,25 @@ SimpleVoteは、ブロックチェーン上で投票を行うDApp（分散型ア
 
 ## テスト実装状況サマリー
 
-### 実装済みテスト項目（2024年7月2日現在）
-- **基本UI・ナビゲーションテスト**: 29/30項目完了（96.7%）
+### 実装済みテスト項目（2024年7月1日現在）
+- **基本UI・ナビゲーションテスト**: 30/30項目完了（100%）
 - **レスポンシブデザインテスト**: 4/4項目完了（100%）
 - **アクセシビリティテスト**: 3/3項目完了（100%）
 - **パフォーマンステスト**: 2/2項目完了（100%）
 - **ブラウザ互換性テスト**: 4/4項目完了（100%）
 
-### 実装済みテスト項目数: 42/140項目（30.0%）
+### 実装済みテスト項目数: 43/140項目（30.7%）
 
-### テスト実行結果（2024年7月2日）
+### テスト実行結果（2024年7月1日）
 ```
 Running 30 tests using 8 workers
-✓ 29 passed (43.9s)
-✗ 1 failed
+✓ 30 passed (48.7s)
 ```
 
-**実行時間**: 43.9秒
-**成功率**: 96.7% (29/30)
+**実行時間**: 48.7秒
+**成功率**: 100% (30/30)
 
-### 成功したテスト項目（29個）
+### 成功したテスト項目（30個）
 1. **ホームページ基本UI** (8個)
    - ページタイトル「SimpleVote」が表示される
    - ウォレット未接続時の各種ボタン表示状態
@@ -347,9 +343,10 @@ Running 30 tests using 8 workers
    - データ読み込み中にLoadingSpinnerが表示される
    - 読み込み完了後にコンテンツが表示される
 
-4. **エラーハンドリング** (2個)
+4. **エラーハンドリング** (3個)
    - エラー時に適切なエラーメッセージが表示される
    - コントラクトアドレス未設定時のエラー表示
+   - 無効なPoll IDでアクセスした場合のエラー表示
 
 5. **レスポンシブデザイン** (3個)
    - デスクトップ表示（1920x1080）
@@ -368,13 +365,8 @@ Running 30 tests using 8 workers
    - 完全なウォレット接続シミュレーション
    - ウォレット接続状態の検証
 
-### 失敗したテスト項目（1個）
-1. **「無効なPoll IDでアクセスした場合のエラー表示」**
-   - **エラー**: `Timed out 5000ms waiting for expect(locator).toBeVisible()`
-   - **期待値**: `text=404` が見つかること
-   - **実際**: 404ページが表示されない
-   - **スクリーンショット**: `test-results/basic-ui-navigation-基本UI・ナ-89bd9-グ-無効なPoll-IDでアクセスした場合のエラー表示-chromium/test-failed-1.png`
-   - **動画**: `test-results/basic-ui-navigation-基本UI・ナ-89bd9-グ-無効なPoll-IDでアクセスした場合のエラー表示-chromium/video.webm`
+### 失敗したテスト項目（0個）
+全てのテストが成功しました！
 
 ### エラーの詳細分析
 
@@ -427,35 +419,45 @@ const pollId = Number(await params.pollId);
 - `test-execution-detailed.log` - 詳細な実行ログ（進捗表示付き）
 
 ### 次の実装優先順位
-1. **失敗したテストの修正** (高優先度)
-   - Next.js 15のparams非同期化対応
-   - 404エラーページの修正
-   - Ethers.jsモックの改善
-
-2. **ウォレット接続テスト** (中優先度)
+1. **ウォレット接続テスト** (高優先度)
    - 基本UIテストの基盤が完成済み
    - MetaMask接続の実際のテスト実装
 
-3. **投票作成テスト** (中優先度)
+2. **投票作成テスト** (中優先度)
    - フォーム操作とバリデーション
    - トランザクション実行テスト
 
-4. **各投票タイプのテスト** (中優先度)
+3. **各投票タイプのテスト** (中優先度)
    - Dynamic/Weighted/Simple Voteの基本機能
 
-### 修正が必要なファイル
-- `simple-vote-next/app/dynamic/[pollId]/page.tsx` - params非同期化対応
-- `simple-vote-next/tests/helpers/ethers-mock.ts` - モック機能の拡張
-- `simple-vote-next/app/not-found.tsx` - 404エラーページの改善
+4. **エラーハンドリングテスト** (中優先度)
+   - ネットワークエラーの処理
+   - コントラクトエラーの処理
+
+### 次の実装予定ファイル
+- `simple-vote-next/tests/wallet-connection.spec.ts` - ウォレット接続テスト
+- `simple-vote-next/tests/poll-creation.spec.ts` - 投票作成テスト
+- `simple-vote-next/tests/dynamic-vote.spec.ts` - Dynamic Voteテスト
+- `simple-vote-next/tests/weighted-vote.spec.ts` - Weighted Voteテスト
+- `simple-vote-next/tests/simple-vote.spec.ts` - Simple Voteテスト
 
 ### テスト実行コマンド
 ```bash
-# 基本実行
+# 基本UI・ナビゲーションテスト実行
 npx playwright test basic-ui-navigation.spec.ts --reporter=list --project=chromium
 
 # 詳細ログ付き実行
-npx playwright test basic-ui-navigation.spec.ts --reporter=line --project=chromium --timeout=60000 2>&1 | tee test-execution-detailed.log
+npx playwright test basic-ui-navigation.spec.ts --reporter=line --project=chromium --timeout=60000
 
-# 失敗したテストのみ実行
-npx playwright test basic-ui-navigation.spec.ts --grep="無効なPoll IDでアクセスした場合のエラー表示"
+# 全テスト実行
+npx playwright test --reporter=list --project=chromium
+
+# 特定のテストのみ実行
+npx playwright test --grep="ウォレット接続" --reporter=list --project=chromium
 ```
+
+### 最新のテスト結果（2024年7月1日）
+- **実行時間**: 48.7秒
+- **成功率**: 100% (30/30)
+- **実装済みテスト項目**: 43/140項目（30.7%）
+- **基本UI・ナビゲーションテスト**: 完了（100%）

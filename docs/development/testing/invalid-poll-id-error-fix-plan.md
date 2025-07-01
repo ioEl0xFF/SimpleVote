@@ -1,346 +1,260 @@
-# 無効なPoll IDエラー問題の修正計画
+# 無効なPoll IDエラー修正手順書
 
-## 問題の概要
+## 修正概要
 
-**問題**: 無効なPoll IDでアクセスした場合のテストが失敗する
-**エラー**: `Timed out 5000ms waiting for expect(locator).toBeVisible()`
-**期待値**: `text=404` が見つかること
-**実際**: 404ページが表示されない
+**修正対象**: 無効なPoll IDでアクセスした場合の404ページ表示問題
+**根本原因**: Next.js 15の新しい制約により、クライアントコンポーネントで`params`を直接使用し、`notFound()`を呼び出していること
+**修正方針**: 動的ルートページをサーバーコンポーネントに変更し、適切なパラメータ処理を実装
 
-## 原因分析
+## 修正対象ファイル
 
-### 1. not-found.tsxの問題
-- **ファイル**: `simple-vote-next/app/not-found.tsx`
-- **問題**: 「404」というテキストが含まれていない
-- **現在の内容**: 「ページが見つかりません」という日本語テキストのみ
-
-### 2. 動的ルートの404処理問題
-- **ファイル**: 
-  - `simple-vote-next/app/dynamic/[pollId]/page.tsx`
-  - `simple-vote-next/app/simple/[pollId]/page.tsx`
-  - `simple-vote-next/app/weighted/[pollId]/page.tsx`
-- **問題**: `notFound()`関数が使用されていない
-- **現在の処理**: 独自のエラーメッセージ「無効なPoll IDです」を表示
-
-### 3. テストセレクターの問題
-- **ファイル**: `simple-vote-next/tests/basic-ui-navigation.spec.ts`
-- **問題**: `text=404`を検索しているが、実際のテキストと一致しない
-
-## 修正方針の選択
-
-### 方針A: Next.js標準の404処理を使用（推奨）
-- 動的ルートで`notFound()`関数を使用
-- `not-found.tsx`に「404」テキストを追加
-- テストは現状のまま維持
-
-### 方針B: 独自エラーメッセージを維持
-- 動的ルートの独自エラーメッセージを維持
-- テストのセレクターを「無効なPoll IDです」に変更
-
-### 方針C: ハイブリッド対応
-- `not-found.tsx`に「404」テキストを追加
-- 動的ルートでは独自エラーメッセージを維持
-- テストで両方のケースに対応
-
-## 推奨修正方針: 方針A（Next.js標準の404処理を使用）
-
-### 理由
-1. **Next.jsのベストプラクティスに従う**
-2. **一貫性のあるエラーハンドリング**
-3. **SEOフレンドリーな404ページ**
-4. **将来的な拡張性**
+1. `simple-vote-next/app/dynamic/[pollId]/page.tsx`
+2. `simple-vote-next/app/simple/[pollId]/page.tsx`
+3. `simple-vote-next/app/weighted/[pollId]/page.tsx`
 
 ## 修正手順
 
-### ステップ1: not-found.tsxの修正
+### ステップ1: Dynamic Vote ページの修正
 
-**ファイル**: `simple-vote-next/app/not-found.tsx`
+#### 1.1 ファイルの現在の状態確認
+```bash
+# 現在のファイル内容を確認
+cat simple-vote-next/app/dynamic/[pollId]/page.tsx
+```
 
-**修正内容**:
+#### 1.2 サーバーコンポーネントへの変更
 ```tsx
-import Link from 'next/link';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+// 修正前（クライアントコンポーネント）
+'use client';
 
-export default function NotFound() {
+export default function DynamicVotePage({ params }: { params: { pollId: string } }) {
+    const pollId = Number(params.pollId);
+    if (isNaN(pollId) || pollId <= 0) {
+        notFound();
+    }
+    // ...
+}
+
+// 修正後（サーバーコンポーネント）
+export default async function DynamicVotePage({ params }: { params: Promise<{ pollId: string }> }) {
+    const { pollId } = await params;
+    const pollIdNum = Number(pollId);
+
+    if (isNaN(pollIdNum) || pollIdNum <= 0) {
+        notFound();
+    }
+
+    // データフェッチをサーバー側で実行
+    const pollData = await fetchPollData(pollIdNum);
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-                <div className="flex justify-center mb-4">
-                    <ExclamationTriangleIcon className="w-16 h-16 text-yellow-500" />
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">404 - ページが見つかりません</h1>
-                <p className="text-gray-600 mb-6">
-                    お探しのページは存在しないか、移動された可能性があります。
-                </p>
-                <Link
-                    href="/"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    ホームに戻る
-                </Link>
-            </div>
+        <div>
+            <PageHeader title="動的投票" />
+            <DynamicVoteClient pollData={pollData} pollId={pollIdNum} />
         </div>
     );
 }
 ```
 
-**変更点**:
-- `<h1>`タグに「404 - 」を追加
-
-### ステップ2: 動的ルートの修正
-
-#### 2.1 dynamic/[pollId]/page.tsxの修正
-
-**ファイル**: `simple-vote-next/app/dynamic/[pollId]/page.tsx`
-
-**修正内容**:
+#### 1.3 クライアントコンポーネントの分離
 ```tsx
+// simple-vote-next/components/DynamicVoteClient.tsx を新規作成
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { ethers } from 'ethers';
-import { useRouter } from 'next/navigation';
-import { notFound } from 'next/navigation'; // 追加
-import { useWallet } from '@/components/WalletProvider';
-import App from '@/components/App';
-import PageHeader from '@/components/PageHeader';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS } from '@/lib/constants';
+interface DynamicVoteClientProps {
+    pollData: any;
+    pollId: number;
+}
 
-// ... 既存のDynamicVoteコンポーネント ...
+export default function DynamicVoteClient({ pollData, pollId }: DynamicVoteClientProps) {
+    // 既存のクライアント側ロジックをここに移動
+    // ウォレット接続、投票処理など
+}
+```
 
-// 動的ルーティングページコンポーネント
-export default function DynamicVotePage({ params }: { params: { pollId: string } }) {
-    const { signer, showToast } = useWallet();
-    const router = useRouter();
-    const pollId = Number(params.pollId);
+### ステップ2: Simple Vote ページの修正
 
-    // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
-        notFound(); // 変更: 独自エラーメッセージからnotFound()に変更
+#### 2.1 サーバーコンポーネントへの変更
+```tsx
+// simple-vote-next/app/simple/[pollId]/page.tsx
+export default async function SimpleVotePage({ params }: { params: Promise<{ pollId: string }> }) {
+    const { pollId } = await params;
+    const pollIdNum = Number(pollId);
+
+    if (isNaN(pollIdNum) || pollIdNum <= 0) {
+        notFound();
     }
 
+    const pollData = await fetchPollData(pollIdNum);
+
     return (
-        <App>
-            <PageHeader
-                title="Dynamic Vote"
-                breadcrumbs={[
-                    { label: 'Dynamic Vote', href: '/dynamic' },
-                    { label: `ID: ${pollId}` },
-                ]}
-            />
-            <DynamicVote signer={signer} pollId={pollId} showToast={showToast} />
-        </App>
+        <div>
+            <PageHeader title="シンプル投票" />
+            <SimpleVoteClient pollData={pollData} pollId={pollIdNum} />
+        </div>
     );
 }
 ```
 
-**変更点**:
-- `notFound`をインポート
-- 無効なPoll IDの場合に`notFound()`を呼び出し
-
-#### 2.2 simple/[pollId]/page.tsxの修正
-
-**ファイル**: `simple-vote-next/app/simple/[pollId]/page.tsx`
-
-**修正内容**:
+#### 2.2 クライアントコンポーネントの分離
 ```tsx
+// simple-vote-next/components/SimpleVoteClient.tsx を新規作成
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { ethers } from 'ethers';
-import { useRouter } from 'next/navigation';
-import { notFound } from 'next/navigation'; // 追加
-import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS, ZERO } from '@/lib/constants';
-import { useWallet } from '@/components/WalletProvider';
-import App from '@/components/App';
-import PageHeader from '@/components/PageHeader';
-import LoadingSpinner from '@/components/LoadingSpinner';
+interface SimpleVoteClientProps {
+    pollData: any;
+    pollId: number;
+}
 
-// SimpleVote ページコンポーネント
-export default function SimpleVotePage({ params }: { params: { pollId: string } }) {
-    const router = useRouter();
-    const { signer, showToast } = useWallet();
-    const pollId = Number(params.pollId);
-
-    // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
-        notFound(); // 変更: 独自エラーメッセージからnotFound()に変更
-    }
-
-    // ... 既存のコード ...
+export default function SimpleVoteClient({ pollData, pollId }: SimpleVoteClientProps) {
+    // 既存のクライアント側ロジックをここに移動
 }
 ```
 
-**変更点**:
-- `notFound`をインポート
-- 無効なPoll IDの場合に`notFound()`を呼び出し
+### ステップ3: Weighted Vote ページの修正
 
-#### 2.3 weighted/[pollId]/page.tsxの修正
-
-**ファイル**: `simple-vote-next/app/weighted/[pollId]/page.tsx`
-
-**修正内容**:
+#### 3.1 サーバーコンポーネントへの変更
 ```tsx
-'use client';
+// simple-vote-next/app/weighted/[pollId]/page.tsx
+export default async function WeightedVotePage({ params }: { params: Promise<{ pollId: string }> }) {
+    const { pollId } = await params;
+    const pollIdNum = Number(pollId);
 
-import { useEffect, useState, useCallback } from 'react';
-import { ethers } from 'ethers';
-import { useRouter } from 'next/navigation';
-import { notFound } from 'next/navigation'; // 追加
-import { useWallet } from '@/components/WalletProvider';
-import App from '@/components/App';
-import PageHeader from '@/components/PageHeader';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS, ERC20_ABI, ZERO } from '@/lib/constants';
-
-// ... 既存のWeightedVoteコンポーネント ...
-
-// 動的ルーティングページコンポーネント
-export default function WeightedVotePage({ params }: { params: { pollId: string } }) {
-    const { signer, showToast } = useWallet();
-    const router = useRouter();
-    const pollId = Number(params.pollId);
-
-    // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
-        notFound(); // 変更: 独自エラーメッセージからnotFound()に変更
+    if (isNaN(pollIdNum) || pollIdNum <= 0) {
+        notFound();
     }
 
+    const pollData = await fetchPollData(pollIdNum);
+
     return (
-        <App>
-            <PageHeader
-                title="Weighted Vote"
-                breadcrumbs={[
-                    { label: 'Weighted Vote', href: '/weighted' },
-                    { label: `ID: ${pollId}` },
-                ]}
-            />
-            <WeightedVote signer={signer} pollId={pollId} showToast={showToast} />
-        </App>
+        <div>
+            <PageHeader title="重み付き投票" />
+            <WeightedVoteClient pollData={pollData} pollId={pollIdNum} />
+        </div>
     );
 }
 ```
 
-**変更点**:
-- `notFound`をインポート
-- 無効なPoll IDの場合に`notFound()`を呼び出し
-
-### ステップ3: テストの確認
-
-**ファイル**: `simple-vote-next/tests/basic-ui-navigation.spec.ts`
-
-**現在のテストコード**:
+#### 3.2 クライアントコンポーネントの分離
 ```tsx
-test('無効なPoll IDでアクセスした場合のエラー表示', async ({ page }) => {
-    // 無効なPoll IDでのアクセステスト
-    await page.goto('/dynamic/999999');
-    // エラーページの表示確認
-    await expect(page.locator('text=404')).toBeVisible();
-});
+// simple-vote-next/components/WeightedVoteClient.tsx を新規作成
+'use client';
+
+interface WeightedVoteClientProps {
+    pollData: any;
+    pollId: number;
+}
+
+export default function WeightedVoteClient({ pollData, pollId }: WeightedVoteClientProps) {
+    // 既存のクライアント側ロジックをここに移動
+}
 ```
 
-**修正後の動作**:
-- `not-found.tsx`が表示される
-- 「404 - ページが見つかりません」テキストが表示される
-- テストが成功する
+### ステップ4: データフェッチ関数の実装
 
-## 修正後の検証手順
-
-### 1. 修正内容の確認
-```bash
-# 修正したファイルの内容確認
-cat simple-vote-next/app/not-found.tsx
-cat simple-vote-next/app/dynamic/[pollId]/page.tsx
-cat simple-vote-next/app/simple/[pollId]/page.tsx
-cat simple-vote-next/app/weighted/[pollId]/page.tsx
+#### 4.1 サーバー側データフェッチ関数の作成
+```tsx
+// simple-vote-next/lib/poll-data.ts を新規作成
+export async function fetchPollData(pollId: number) {
+    // ブロックチェーンからポールデータを取得するロジック
+    // 既存のデータフェッチロジックをサーバー側に移動
+    return {
+        id: pollId,
+        title: "サンプル投票",
+        description: "投票の説明",
+        options: ["選択肢1", "選択肢2", "選択肢3"],
+        // その他の必要なデータ
+    };
+}
 ```
 
-### 2. 開発サーバーでの手動確認
+### ステップ5: インポート文の更新
+
+#### 5.1 各ページファイルでのインポート更新
+```tsx
+// 各ページファイルの先頭に追加
+import { fetchPollData } from '@/lib/poll-data';
+import { DynamicVoteClient } from '@/components/DynamicVoteClient';
+import { SimpleVoteClient } from '@/components/SimpleVoteClient';
+import { WeightedVoteClient } from '@/components/WeightedVoteClient';
+```
+
+## 修正後の動作確認
+
+### 5.1 開発サーバーの起動
 ```bash
 cd simple-vote-next
 npm run dev
 ```
 
-**手動テスト手順**:
-1. ブラウザで`http://localhost:3000/dynamic/invalid-poll-id`にアクセス
-2. ブラウザで`http://localhost:3000/simple/invalid-poll-id`にアクセス
-3. ブラウザで`http://localhost:3000/weighted/invalid-poll-id`にアクセス
-4. 各URLで404ページ（「404 - ページが見つかりません」）が表示されることを確認
+### 5.2 手動テスト
+1. **有効なPoll IDでのアクセス**
+   - `/dynamic/1` → 正常にページが表示される
+   - `/simple/1` → 正常にページが表示される
+   - `/weighted/1` → 正常にページが表示される
 
-### 3. テストの実行
-```bash
-# 特定のテストケースのみ実行
-npx playwright test --grep "無効なPoll IDでアクセスした場合のエラー表示"
+2. **無効なPoll IDでのアクセス**
+   - `/dynamic/999999` → 404ページが表示される
+   - `/simple/999999` → 404ページが表示される
+   - `/weighted/999999` → 404ページが表示される
 
-# 全テスト実行
-npx playwright test
-```
-
-### 4. 本番ビルドでの確認
+### 5.3 自動テストの実行
 ```bash
 cd simple-vote-next
-npm run build
-npm start
+npm run test:e2e
 ```
 
-## 期待される結果
+期待される結果：
+- 「無効なPoll IDでアクセスした場合のエラー表示」テストが成功
+- `text=404`セレクターが正しくマッチ
+- タイムアウトエラーが解消
 
-### 修正前
-- 無効なPoll IDでアクセス → 独自エラーメッセージ「無効なPoll IDです」を表示
-- テスト失敗: `text=404`が見つからない
+## 修正のポイント
 
-### 修正後
-- 無効なPoll IDでアクセス → Next.js標準の404ページ「404 - ページが見つかりません」を表示
-- テスト成功: `text=404`が見つかる
+### 1. Next.js 15の制約への準拠
+- `params`を`await`してから使用
+- サーバーコンポーネントでの`notFound()`使用
 
-## リスクと対策
+### 2. コンポーネント設計の改善
+- サーバーコンポーネント：データフェッチとパラメータ検証
+- クライアントコンポーネント：UI表示とインタラクション
 
-### リスク1: 既存のユーザー体験の変化
-**リスク**: 独自エラーメッセージから標準404ページへの変更により、ユーザー体験が変わる
-**対策**: 
-- 404ページのデザインを既存のアプリケーションに合わせて調整
-- 必要に応じて、より詳細なエラーメッセージを追加
+### 3. エラーハンドリングの一貫性
+- 無効なPoll IDでの一貫した404ページ表示
+- 適切なエラーメッセージの表示
 
-### リスク2: SEOへの影響
-**リスク**: 404ページの変更によりSEOに影響する可能性
-**対策**:
-- 適切なHTTPステータスコード（404）が返されることを確認
-- 404ページに適切なメタタグを設定
+## 注意事項
 
-### リスク3: 他のテストへの影響
-**リスク**: 修正により他のテストが失敗する可能性
-**対策**:
-- 全テストスイートを実行して影響を確認
-- 必要に応じて他のテストも修正
+### 1. 既存機能への影響
+- ウォレット接続機能はクライアントコンポーネントで維持
+- 投票処理はクライアントコンポーネントで実行
+- データフェッチのみサーバー側に移動
 
-## 代替案
+### 2. 型安全性の確保
+- TypeScriptの型定義を適切に設定
+- インターフェースの定義と使用
 
-### 代替案1: テストのみ修正
-- 動的ルートの独自エラーメッセージを維持
-- テストのセレクターを「無効なPoll IDです」に変更
+### 3. パフォーマンスの考慮
+- サーバー側でのデータフェッチによる初期表示の高速化
+- クライアント側でのインタラクティブ機能の維持
 
-**メリット**: 最小限の変更で済む
-**デメリット**: Next.jsのベストプラクティスに従わない
+## 修正完了後の確認項目
 
-### 代替案2: ハイブリッド対応
-- `not-found.tsx`に「404」テキストを追加
-- 動的ルートでは独自エラーメッセージを維持
-- テストで両方のケースに対応
+- [ ] 無効なPoll IDで404ページが正しく表示される
+- [ ] 有効なPoll IDで正常にページが表示される
+- [ ] ウォレット接続機能が正常に動作する
+- [ ] 投票機能が正常に動作する
+- [ ] 自動テストが全て成功する
+- [ ] Next.js 15の制約に準拠している
 
-**メリット**: 既存の動作を維持しつつ、テストも通る
-**デメリット**: 複雑な実装になる
+## 参考資料
 
-## 結論
+- [Next.js 15 Dynamic APIs Documentation](https://nextjs.org/docs/messages/sync-dynamic-apis)
+- [Next.js App Router notFound() Documentation](https://nextjs.org/docs/app/api-reference/functions/not-found)
+- [Next.js Server vs Client Components](https://nextjs.org/docs/getting-started/react-essentials#server-components)
 
-**推奨修正方針**: 方針A（Next.js標準の404処理を使用）
+---
 
-この修正により、以下のメリットが得られます：
-
-1. **Next.jsのベストプラクティスに従う**
-2. **一貫性のあるエラーハンドリング**
-3. **テストが成功する**
-4. **SEOフレンドリーな404ページ**
-5. **将来的な拡張性**
-
-修正手順に従って実装することで、問題を解決し、より良いユーザー体験を提供できます。 
+**作成日時**: 2025年7月1日
+**作成者**: AI Assistant
+**次回更新予定**: 修正実装完了後 
