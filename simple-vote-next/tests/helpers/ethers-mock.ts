@@ -11,6 +11,11 @@ export async function setupEthersMock(page: Page) {
 
         console.log('Setting up complete ethers.js mock...');
 
+        // グローバルなログ関数を追加
+        (window as any).debugLog = (message: string, data?: any) => {
+            console.log(`[DEBUG] ${message}`, data);
+        };
+
         // イベントリスナー管理用
         const eventListeners: { [key: string]: any[] } = {};
 
@@ -44,6 +49,9 @@ export async function setupEthersMock(page: Page) {
                         case 'eth_blockNumber':
                             console.log('Returning mock block number: 0x123456');
                             return '0x123456';
+                        case 'eth_estimateGas':
+                            console.log('Returning mock gas estimate: 0x186A0');
+                            return '0x186A0';
                         default:
                             console.log('Unknown method:', args.method);
                             return null;
@@ -113,6 +121,27 @@ export async function setupEthersMock(page: Page) {
 
         // ethers.jsのモジュールレベルモック
         const mockEthers = {
+            isAddress: (address: string) => {
+                console.log('Mock ethers.isAddress called with:', address);
+                // 簡単なアドレス形式チェック
+                return /^0x[a-fA-F0-9]{40}$/.test(address);
+            },
+            parseUnits: (value: string, unit: string) => {
+                console.log('Mock ethers.parseUnits called with:', value, unit);
+                // 簡単な単位変換モック
+                return BigInt(value) * BigInt(10 ** 18);
+            },
+            formatUnits: (value: bigint, unit: string) => {
+                console.log('Mock ethers.formatUnits called with:', value, unit);
+                return value.toString();
+            },
+            getBigInt: (value: any) => {
+                console.log('Mock ethers.getBigInt called with:', value);
+                if (typeof value === 'bigint') return value;
+                if (typeof value === 'number') return BigInt(value);
+                if (typeof value === 'string') return BigInt(value);
+                return BigInt(0);
+            },
             BrowserProvider: class MockBrowserProvider {
                 private ethereum: any;
                 private _signer: any;
@@ -160,6 +189,99 @@ export async function setupEthersMock(page: Page) {
                 async getPoll(pollId: number) {
                     console.log('MockContract.getPoll called with:', pollId);
                     return [0, 0, 0, 0, 0, 0, [], []];
+                }
+
+                async createPoll(
+                    pollType: any,
+                    topic: string,
+                    startTime: any,
+                    endTime: any,
+                    choices: string[],
+                    tokenAddress: string
+                ) {
+                    (window as any).debugLog('MockContract.createPoll called with raw values:', {
+                        pollType,
+                        topic,
+                        startTime,
+                        endTime,
+                        choices,
+                        tokenAddress,
+                    });
+
+                    (window as any).debugLog('Value types:', {
+                        pollType: typeof pollType,
+                        startTime: typeof startTime,
+                        endTime: typeof endTime,
+                        topic: typeof topic,
+                        choices: typeof choices,
+                        tokenAddress: typeof tokenAddress,
+                    });
+
+                    (window as any).debugLog('Value constructors:', {
+                        pollType: pollType?.constructor?.name,
+                        startTime: startTime?.constructor?.name,
+                        endTime: endTime?.constructor?.name,
+                    });
+
+                    // バリデーションチェック
+                    if (!topic || topic.trim() === '') {
+                        throw new Error('トピックは必須です');
+                    }
+
+                    if (!choices || choices.length < 2) {
+                        throw new Error('選択肢は2つ以上必要です');
+                    }
+
+                    try {
+                        // 数値をBigIntに変換
+                        (window as any).debugLog('Converting pollType to BigInt:', pollType);
+                        const pollTypeBigInt = BigInt(pollType);
+                        (window as any).debugLog('Converting startTime to BigInt:', startTime);
+                        const startTimeBigInt = BigInt(startTime);
+                        (window as any).debugLog('Converting endTime to BigInt:', endTime);
+                        const endTimeBigInt = BigInt(endTime);
+
+                        if (startTimeBigInt >= endTimeBigInt) {
+                            throw new Error('終了日時は開始日時より後を設定してください');
+                        }
+
+                        (window as any).debugLog('Converted values:', {
+                            pollType: pollTypeBigInt,
+                            startTime: startTimeBigInt,
+                            endTime: endTimeBigInt,
+                        });
+
+                        // モックトランザクションオブジェクトを返す
+                        return {
+                            wait: async () => ({
+                                logs: [
+                                    {
+                                        // PollCreatedイベントのモックログ
+                                        topics: [
+                                            '0x1234567890123456789012345678901234567890', // イベントシグネチャ
+                                            '0x0000000000000000000000000000000000000000000000000000000000000001', // pollId
+                                            '0x0000000000000000000000000000000000000000000000000000000000000000', // pollType
+                                            '0x1234567890123456789012345678901234567890', // owner
+                                        ],
+                                        data: '0x', // イベントデータ
+                                    },
+                                ],
+                            }),
+                        };
+                    } catch (error) {
+                        (window as any).debugLog('MockContract.createPoll error:', error);
+                        (window as any).debugLog('Error details:', {
+                            message: error instanceof Error ? error.message : String(error),
+                            stack: error instanceof Error ? error.stack : undefined,
+                            pollType: pollType,
+                            startTime: startTime,
+                            endTime: endTime,
+                            pollTypeType: typeof pollType,
+                            startTimeType: typeof startTime,
+                            endTimeType: typeof endTime,
+                        });
+                        throw error;
+                    }
                 }
 
                 on(event: string, callback: any) {
@@ -266,11 +388,17 @@ export async function simulateQuickWalletConnection(page: Page) {
  * トーストメッセージの検証ヘルパー（最適化版）
  */
 export async function waitForToast(page: Page, expectedMessage: string, timeout = 3000) {
+    // トースト要素が表示されるまで待機
     await page.waitForSelector('[data-testid="toast"]', { timeout });
-    const toast = page.locator('[data-testid="toast"]');
-    await expect(toast).toBeVisible();
 
-    const toastText = await toast.textContent();
+    // 最新のトーストのみを取得
+    const toasts = page.locator('[data-testid="toast"]');
+    const count = await toasts.count();
+    const latestToast = toasts.nth(count - 1);
+
+    await expect(latestToast).toBeVisible();
+
+    const toastText = await latestToast.textContent();
     expect(toastText).toContain(expectedMessage);
 
     console.log('Toast message verified:', toastText);

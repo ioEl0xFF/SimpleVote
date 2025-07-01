@@ -36,6 +36,11 @@ export default defineConfig({
         /* パフォーマンス最適化のための設定 */
         actionTimeout: 5000,
         navigationTimeout: 10000,
+
+        /* コンソールログを有効化 */
+        launchOptions: {
+            args: ['--enable-logging', '--v=1'],
+        },
     },
 
     /* Configure projects for major browsers */

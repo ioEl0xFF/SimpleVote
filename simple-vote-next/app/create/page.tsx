@@ -88,6 +88,14 @@ export default function CreatePage() {
         if (!registry) return;
         const s = toTimestamp(start);
         const eTime = toTimestamp(end);
+
+        // toTimestamp関数の出力確認
+        console.log('toTimestamp output:', {
+            start: s,
+            end: eTime,
+            types: { start: typeof s, end: typeof eTime },
+        });
+
         if (Number.isNaN(s) || Number.isNaN(eTime)) {
             showToast('日時を正しく入力してください');
             return;
@@ -120,6 +128,22 @@ export default function CreatePage() {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
             const filteredChoices = choices.filter((c) => c);
+
+            // パラメータの詳細ログ
+            console.log('Submit parameters:', {
+                pollTypeEnum,
+                topic,
+                s,
+                eTime,
+                filteredChoices,
+                tokenAddress,
+            });
+            console.log('Parameter types:', {
+                pollTypeEnum: typeof pollTypeEnum,
+                s: typeof s,
+                eTime: typeof eTime,
+                tokenAddress: typeof tokenAddress,
+            });
 
             // PollRegistry の createPoll を呼び出す
             const tx = await registry.createPoll(
