@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS, ZERO } from '@/lib/constants';
 import { useWallet } from '@/components/WalletProvider';
 import App from '@/components/App';
@@ -25,6 +26,11 @@ export default function SimpleVotePage({ params }: { params: { pollId: string } 
     const [start, setStart] = useState(0);
     const [end, setEnd] = useState(0);
     const [loading, setLoading] = useState(true);
+
+    // pollIdが無効な場合の処理
+    if (isNaN(pollId) || pollId <= 0) {
+        notFound();
+    }
 
     // ウォレット接続状態の確認
     useEffect(() => {
@@ -126,24 +132,6 @@ export default function SimpleVotePage({ params }: { params: { pollId: string } 
             setTxPending(false);
         }
     };
-
-    // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
-        return (
-            <App>
-                <PageHeader
-                    title="Simple Vote"
-                    breadcrumbs={[
-                        { label: 'Simple Vote', href: '/simple' },
-                        { label: `ID: ${params.pollId}` },
-                    ]}
-                />
-                <section className="flex flex-col items-center gap-4 mt-10">
-                    <p>無効なPoll IDです</p>
-                </section>
-            </App>
-        );
-    }
 
     // エラー状態の表示
     if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) {

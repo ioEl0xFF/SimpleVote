@@ -8,7 +8,9 @@ export default function NotFound() {
                 <div className="flex justify-center mb-4">
                     <ExclamationTriangleIcon className="w-16 h-16 text-yellow-500" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">ページが見つかりません</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                    404 - ページが見つかりません
+                </h1>
                 <p className="text-gray-600 mb-6">
                     お探しのページは存在しないか、移動された可能性があります。
                 </p>

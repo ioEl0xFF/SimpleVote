@@ -313,7 +313,7 @@ SimpleVoteは、ブロックチェーン上で投票を行うDApp（分散型ア
 
 ## テスト実装状況サマリー
 
-### 実装済みテスト項目（2024年7月現在）
+### 実装済みテスト項目（2024年7月2日現在）
 - **基本UI・ナビゲーションテスト**: 29/30項目完了（96.7%）
 - **レスポンシブデザインテスト**: 4/4項目完了（100%）
 - **アクセシビリティテスト**: 3/3項目完了（100%）
@@ -322,14 +322,14 @@ SimpleVoteは、ブロックチェーン上で投票を行うDApp（分散型ア
 
 ### 実装済みテスト項目数: 42/140項目（30.0%）
 
-### テスト実行結果（2024年7月1日）
+### テスト実行結果（2024年7月2日）
 ```
 Running 30 tests using 8 workers
-✓ 29 passed (42.8s)
+✓ 29 passed (43.9s)
 ✗ 1 failed
 ```
 
-**実行時間**: 42.8秒  
+**実行時間**: 43.9秒
 **成功率**: 96.7% (29/30)
 
 ### 成功したテスト項目（29個）
@@ -399,8 +399,8 @@ Browser console: Failed to fetch polls: TypeError: invalid BytesLike value (argu
 ### 既知の問題点と対策
 
 #### 1. Next.js 15のparams非同期化
-**問題**: `/dynamic/[pollId]`ページでparams.pollIdの非同期処理が必要  
-**対策**: 
+**問題**: `/dynamic/[pollId]`ページでparams.pollIdの非同期処理が必要
+**対策**:
 ```typescript
 // 修正前
 const pollId = Number(params.pollId);
@@ -410,14 +410,14 @@ const pollId = Number(await params.pollId);
 ```
 
 #### 2. 404エラーページの表示
-**問題**: 無効なPoll IDアクセス時の404ページ表示が正しく動作しない  
-**対策**: 
+**問題**: 無効なPoll IDアクセス時の404ページ表示が正しく動作しない
+**対策**:
 - Next.js 15のnot-found.tsxの適切な実装
 - 動的ルートでのエラーハンドリング強化
 
 #### 3. Ethers.jsモックの改善
-**問題**: 一部のethereumメソッドがモックされていない  
-**対策**: 
+**問題**: 一部のethereumメソッドがモックされていない
+**対策**:
 - `eth_newFilter`, `eth_call`, `eth_blockNumber`のモック実装
 - より完全なethers.jsモックの構築
 

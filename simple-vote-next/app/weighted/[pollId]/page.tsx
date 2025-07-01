@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { useWallet } from '@/components/WalletProvider';
 import App from '@/components/App';
 import PageHeader from '@/components/PageHeader';
@@ -247,20 +248,7 @@ export default function WeightedVotePage({ params }: { params: { pollId: string 
 
     // pollIdが無効な場合の処理
     if (isNaN(pollId) || pollId <= 0) {
-        return (
-            <App>
-                <PageHeader
-                    title="Weighted Vote"
-                    breadcrumbs={[
-                        { label: 'Weighted Vote', href: '/weighted' },
-                        { label: `ID: ${params.pollId}` },
-                    ]}
-                />
-                <section className="flex flex-col items-center gap-4 mt-10">
-                    <p>無効なPoll IDです</p>
-                </section>
-            </App>
-        );
+        notFound();
     }
 
     return (

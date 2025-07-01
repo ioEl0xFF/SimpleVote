@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { useWallet } from '@/components/WalletProvider';
 import App from '@/components/App';
 import PageHeader from '@/components/PageHeader';
@@ -38,7 +39,7 @@ function DynamicVote({
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!signer || POLL_REGISTRY_ADDRESS === ZERO) {
+        if (!signer) {
             setLoading(false);
             return;
         }
@@ -120,10 +121,10 @@ function DynamicVote({
         }
     };
 
-    if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) {
+    if (pollId === undefined) {
         return (
             <section className="flex flex-col items-center gap-4 mt-10">
-                <p>PollRegistry コントラクトアドレスが未設定か、Poll ID が無効です</p>
+                <p>Poll ID が無効です</p>
             </section>
         );
     }
@@ -196,20 +197,7 @@ export default function DynamicVotePage({ params }: { params: { pollId: string }
 
     // pollIdが無効な場合の処理
     if (isNaN(pollId) || pollId <= 0) {
-        return (
-            <App>
-                <PageHeader
-                    title="Dynamic Vote"
-                    breadcrumbs={[
-                        { label: 'Dynamic Vote', href: '/dynamic' },
-                        { label: `ID: ${params.pollId}` },
-                    ]}
-                />
-                <section className="flex flex-col items-center gap-4 mt-10">
-                    <p>無効なPoll IDです</p>
-                </section>
-            </App>
-        );
+        notFound();
     }
 
     return (
