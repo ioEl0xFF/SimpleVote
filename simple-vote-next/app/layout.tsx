@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/components/WalletProvider';
+import { ToastProvider } from '@/components/Toast';
 
 const geistSans = Geist({
     variable: '--font-geist-sans',
@@ -39,7 +40,9 @@ export default function RootLayout({
     return (
         <html lang="ja">
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-                <WalletProvider>{children}</WalletProvider>
+                <ToastProvider>
+                    <WalletProvider>{children}</WalletProvider>
+                </ToastProvider>
             </body>
         </html>
     );

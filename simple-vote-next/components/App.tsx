@@ -1,44 +1,46 @@
 'use client';
 
+import React from 'react';
 import { useWallet } from './WalletProvider';
-import Toast from './Toast';
+import { Toast } from './Toast';
 
-interface AppProps {
-    children: React.ReactNode;
-}
-
-export default function App({ children }: AppProps) {
-    const { signer, account, toasts, connectWallet, signOut, removeToast } = useWallet();
+export function App() {
+    const { account, isConnected, connect, disconnect, error, clearError } = useWallet();
 
     return (
-        <main className="flex flex-col items-center gap-6 p-10">
-            <h1 className="text-3xl font-bold">SimpleVote</h1>
-            {!signer ? (
-                <button
-                    className="px-6 py-2 rounded-xl bg-purple-600 text-white"
-                    onClick={connectWallet}
-                >
-                    ウォレット接続
-                </button>
-            ) : (
-                <>
-                    <div className="flex items-center gap-4">
-                        <p className="font-mono">{account}</p>
+        <div className="min-h-screen bg-gray-100">
+            <div className="container mx-auto px-4 py-8">
+                <h1 className="text-3xl font-bold text-center mb-8">SimpleVote</h1>
+
+                <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+                    {!isConnected ? (
                         <button
-                            className="px-4 py-1 rounded-xl bg-gray-400 text-white"
-                            onClick={signOut}
+                            onClick={connect}
+                            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
                         >
-                            切断
+                            ウォレット接続
                         </button>
-                    </div>
-                    {children}
-                </>
-            )}
-            <div className="toast-container">
-                {toasts.map((t) => (
-                    <Toast key={t.id} message={t.msg} onClose={() => removeToast(t.id)} />
-                ))}
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600">接続済みアカウント</p>
+                                <p className="font-mono text-sm bg-gray-100 p-2 rounded">
+                                    {account}
+                                </p>
+                            </div>
+                            <button
+                                onClick={disconnect}
+                                className="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition-colors"
+                            >
+                                切断
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
-        </main>
+
+            {/* エラーメッセージの表示 */}
+            {error && <Toast message={error} type="error" onClose={clearError} />}
+        </div>
     );
 }

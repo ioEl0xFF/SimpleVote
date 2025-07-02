@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/components/WalletProvider';
-import App from '@/components/App';
+import { App } from '@/components/App';
 import PageHeader from '@/components/PageHeader';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS } from '@/lib/constants';
@@ -25,23 +25,21 @@ interface Poll {
 }
 
 // PollRegistry から投票コントラクトの一覧を取得して表示
-function PollList({
-    signer,
-    onSelect,
-}: {
-    signer: ethers.Signer | null;
-    onSelect: (poll: Poll) => void;
-}) {
+function PollList({ onSelect }: { onSelect: (poll: Poll) => void }) {
     const [registry, setRegistry] = useState<ethers.Contract | null>(null);
     const [polls, setPolls] = useState<Poll[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // signer が用意できたら PollRegistry を初期化
+    // PollRegistry を初期化
     useEffect(() => {
-        if (!signer) return;
-        const r = new ethers.Contract(POLL_REGISTRY_ADDRESS, POLL_REGISTRY_ABI, signer);
-        setRegistry(r);
-    }, [signer]);
+        if (typeof window !== 'undefined' && window.ethereum) {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            provider.getSigner().then((signer) => {
+                const r = new ethers.Contract(POLL_REGISTRY_ADDRESS, POLL_REGISTRY_ABI, signer);
+                setRegistry(r);
+            });
+        }
+    }, []);
 
     // PollRegistry から議題一覧を取得
     useEffect(() => {
@@ -107,7 +105,7 @@ function PollList({
         return () => {
             registry.off('PollCreated', fetch);
         };
-    }, [registry, signer]);
+    }, [registry]);
 
     if (loading) {
         return (
@@ -137,11 +135,9 @@ function PollList({
 
 // Poll 一覧ページ
 function PollListPage({
-    signer,
     onSelect,
     onCreate,
 }: {
-    signer: ethers.Signer | null;
     onSelect: (poll: Poll) => void;
     onCreate: () => void;
 }) {
@@ -152,13 +148,12 @@ function PollListPage({
                     新規作成
                 </button>
             </div>
-            <PollList signer={signer} onSelect={onSelect} />
+            <PollList onSelect={onSelect} />
         </div>
     );
 }
 
 export default function HomePage() {
-    const { signer } = useWallet();
     const router = useRouter();
 
     const handleSelect = (poll: Poll) => {
@@ -170,9 +165,11 @@ export default function HomePage() {
     };
 
     return (
-        <App>
-            <PageHeader title="投票一覧" showHomeButton={false} />
-            <PollListPage signer={signer} onSelect={handleSelect} onCreate={handleCreate} />
-        </App>
+        <div className="min-h-screen bg-gray-100">
+            <div className="container mx-auto px-4 py-8">
+                <PageHeader title="投票一覧" showHomeButton={false} />
+                <PollListPage onSelect={handleSelect} onCreate={handleCreate} />
+            </div>
+        </div>
     );
 }

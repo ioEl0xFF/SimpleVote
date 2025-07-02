@@ -2,6 +2,60 @@ import { Page } from '@playwright/test';
 import { setupEthersMock, simulateQuickWalletConnection } from './ethers-mock';
 
 /**
+ * Toast要素の待機と確認を行うヘルパー関数
+ */
+export const waitForToast = async (page: Page, message: string, timeout = 10000): Promise<boolean> => {
+    try {
+        // 動的な待機条件を使用
+        await page.waitForFunction(
+            (msg) => {
+                const toastElements = document.querySelectorAll('[role="alert"], .toast, [data-testid="toast"]');
+                return Array.from(toastElements).some(el => 
+                    el.textContent?.includes(msg) && el.textContent.trim() !== ''
+                );
+            },
+            message,
+            { timeout }
+        );
+        console.log(`Toast found with message: ${message}`);
+        return true;
+    } catch (error) {
+        console.log(`Toast with message "${message}" not found`);
+        return false;
+    }
+};
+
+/**
+ * ウォレット接続状態の待機を行うヘルパー関数
+ */
+export const waitForWalletConnection = async (page: Page, timeout = 10000): Promise<boolean> => {
+    try {
+        // アカウントアドレス表示の待機
+        const addressSelectors = [
+            '.font-mono',
+            '[data-testid="account-address"]',
+            '.account-address'
+        ];
+
+        for (const selector of addressSelectors) {
+            try {
+                await page.waitForSelector(selector, { timeout: timeout / 3 });
+                console.log(`Wallet connected, address found with selector: ${selector}`);
+                return true;
+            } catch (error) {
+                console.log(`Selector ${selector} not found, trying next...`);
+            }
+        }
+
+        console.log('Wallet connection not detected');
+        return false;
+    } catch (error) {
+        console.log(`ウォレット接続待機エラー: ${error}`);
+        return false;
+    }
+};
+
+/**
  * ウォレット接続状態をシミュレートするヘルパー関数
  */
 export class WalletHelper {
@@ -88,6 +142,72 @@ export class WalletHelper {
      */
     async isDisconnectButtonVisible(): Promise<boolean> {
         return await this.page.getByRole('button', { name: '切断' }).isVisible();
+    }
+
+    /**
+     * アカウント切り替えをシミュレート
+     */
+    async simulateAccountSwitch() {
+        console.log('Simulating account switch...');
+
+        // 新しいアカウントアドレスをシミュレート
+        const newAccount = '0x9876543210987654321098765432109876543210';
+
+        // ethereumオブジェクトのアカウント変更イベントを発火
+        await this.page.evaluate((account) => {
+            if ((window as any).ethereum) {
+                (window as any).ethereum.emit('accountsChanged', [account]);
+            }
+        }, newAccount);
+
+        // アカウント切り替えの処理が完了するまで待機
+        await this.page.waitForTimeout(1000);
+
+        console.log('Account switch simulation completed');
+    }
+
+    /**
+     * ネットワーク切り替えをシミュレート
+     */
+    async simulateNetworkSwitch() {
+        console.log('Simulating network switch...');
+
+        // 新しいネットワークIDをシミュレート
+        const newNetworkId = '0x5'; // Goerli
+
+        // ethereumオブジェクトのネットワーク変更イベントを発火
+        await this.page.evaluate((networkId) => {
+            if ((window as any).ethereum) {
+                (window as any).ethereum.emit('chainChanged', networkId);
+            }
+        }, newNetworkId);
+
+        // ネットワーク切り替えの処理が完了するまで待機
+        await this.page.waitForTimeout(1000);
+
+        console.log('Network switch simulation completed');
+    }
+
+    /**
+     * 無効なネットワークへの切り替えをシミュレート
+     */
+    async simulateInvalidNetworkSwitch() {
+        console.log('Simulating invalid network switch...');
+
+        // 無効なネットワークIDをシミュレート
+        const invalidNetworkId = '0x999'; // 無効なネットワーク
+
+        // ethereumオブジェクトのネットワーク変更イベントを発火
+        await this.page.evaluate((networkId) => {
+            if ((window as any).ethereum) {
+                (window as any).ethereum.emit('chainChanged', networkId);
+            }
+        }, invalidNetworkId);
+
+        // エラーハンドリングの処理が完了するまで待機
+        await this.page.waitForTimeout(1000);
+
+        console.log('Invalid network switch simulation completed');
     }
 }
 

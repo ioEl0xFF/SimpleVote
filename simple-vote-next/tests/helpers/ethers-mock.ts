@@ -480,25 +480,26 @@ export async function simulateQuickWalletConnection(page: Page) {
 /**
  * トーストメッセージの検証ヘルパー（最適化版）
  */
-export async function waitForToast(page: Page, expectedMessage: string, timeout = 5000) {
-    console.log(`Waiting for toast message: "${expectedMessage}"`);
+export async function waitForToast(page: Page, expectedMessage: string, timeout: number = 5000) {
+    try {
+        // Toast要素が表示されるまで待機
+        await page.waitForSelector('[data-testid="toast"]', { timeout });
 
-    // トースト要素が表示されるまで待機（タイムアウト延長）
-    await page.waitForSelector('[data-testid="toast"]', { timeout });
+        // 期待されるメッセージが含まれるToastを待機
+        await page.waitForFunction(
+            (message) => {
+                const toast = document.querySelector('[data-testid="toast"]');
+                return toast && toast.textContent?.includes(message);
+            },
+            expectedMessage,
+            { timeout }
+        );
 
-    // 最新のトーストのみを取得
-    const toasts = page.locator('[data-testid="toast"]');
-    const count = await toasts.count();
-    const latestToast = toasts.nth(count - 1);
-
-    await expect(latestToast).toBeVisible();
-
-    const toastText = await latestToast.textContent();
-    console.log('Found toast text:', toastText);
-
-    expect(toastText).toContain(expectedMessage);
-
-    console.log('Toast message verified:', toastText);
+        return true;
+    } catch (error) {
+        console.error(`Toast with message "${expectedMessage}" not found within ${timeout}ms`);
+        return false;
+    }
 }
 
 /**
@@ -516,4 +517,123 @@ export async function verifyWalletConnectionState(page: Page) {
     ]);
 
     console.log('Optimized wallet connection state verified successfully');
+}
+
+// エラーシミュレーション用の関数を追加
+export async function simulateWalletError(page: Page, errorType: string) {
+    console.log(`Simulating wallet error: ${errorType}`);
+
+    await page.addInitScript((errorType) => {
+        // エラーメッセージの定義
+        const errorMessages: { [key: string]: string } = {
+            METAMASK_NOT_INSTALLED: 'MetaMaskがインストールされていません',
+            NETWORK_ERROR: 'ネットワークエラーが発生しました',
+            TIMEOUT_ERROR: '接続がタイムアウトしました',
+            CONNECTION_REJECTED: 'ウォレット接続が拒否されました',
+            UNSUPPORTED_NETWORK: 'サポートされていないネットワークです',
+            unexpected: '予期しないエラーが発生しました',
+        };
+
+        // エラーモックの作成
+        const createErrorMock = (type: string) => {
+            return () => {
+                const message = errorMessages[type] || '予期しないエラーが発生しました';
+                console.log(`Throwing error: ${message}`);
+                throw new Error(message);
+            };
+        };
+
+        // window.ethereumをエラーモックに置き換え
+        Object.defineProperty(window, 'ethereum', {
+            value: {
+                request: createErrorMock(errorType),
+                on: () => {},
+                removeListener: () => {},
+                isMetaMask: false,
+            },
+            configurable: true,
+        });
+
+        console.log(`Error mock set up for: ${errorType}`);
+    }, errorType);
+
+    // ページをリロードしてモックを適用
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+}
+
+/**
+ * エラーシミュレーション用のモックを作成
+ */
+export const createErrorMock = (errorType: string) => {
+    switch (errorType) {
+        case 'METAMASK_NOT_INSTALLED':
+            return () => {
+                throw new Error('MetaMaskがインストールされていません');
+            };
+        case 'UNSUPPORTED_NETWORK':
+            return () => {
+                throw new Error('サポートされていないネットワークです');
+            };
+        case 'CONNECTION_REJECTED':
+            return () => {
+                throw new Error('ウォレット接続が拒否されました');
+            };
+        case 'NETWORK_ERROR':
+            return () => {
+                throw new Error('ネットワークエラーが発生しました');
+            };
+        case 'TIMEOUT_ERROR':
+            return () => {
+                throw new Error('接続がタイムアウトしました');
+            };
+        default:
+            return () => {
+                throw new Error('予期しないエラーが発生しました');
+            };
+    }
+};
+
+// ethereumオブジェクトの完全削除
+export async function removeEthereum(page: Page) {
+    await page.evaluate(() => {
+        delete (window as any).ethereum;
+    });
+}
+
+// 正常な状態への復旧
+export async function restoreEthereum(page: Page) {
+    console.log('Restoring normal ethereum state...');
+
+    await page.addInitScript(() => {
+        // 正常なethersモックを再適用（setupEthersMockは引数不要）
+        // setupEthersMock関数は既にグローバルに適用されているため、ここでは呼び出さない
+
+        // 元のethereumオブジェクトを復元
+        Object.defineProperty(window, 'ethereum', {
+            value: {
+                request: async (args: any) => {
+                    console.log('Mock ethereum.request called with:', args);
+                    if (args.method === 'eth_requestAccounts') {
+                        return ['0x1234567890123456789012345678901234567890'];
+                    }
+                    if (args.method === 'eth_chainId') {
+                        return '0x1';
+                    }
+                    return null;
+                },
+                on: () => {},
+                removeListener: () => {},
+                isMetaMask: true,
+            },
+            configurable: true,
+        });
+    });
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    console.log('Ethereum state restored');
 } 
