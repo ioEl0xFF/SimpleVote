@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ethers } from 'ethers';
+// import { ethers } from 'ethers'; // 削除
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/components/WalletProvider';
 import App from '@/components/App';
@@ -14,11 +14,20 @@ import {
     ZERO,
 } from '@/lib/constants';
 
+// ethersの取得を動的に行う
+const getEthers = () => {
+    if (typeof window !== 'undefined' && (window as any).ethers) {
+        return (window as any).ethers;
+    }
+    // フォールバック: 本物のethers.js
+    return require('ethers');
+};
+
 // PollRegistry を使って DynamicVote か WeightedVote を作成するフォーム
 export default function CreatePage() {
     const router = useRouter();
     const { signer, showToast } = useWallet();
-    const [registry, setRegistry] = useState<ethers.Contract | null>(null);
+    const [registry, setRegistry] = useState<any>(null);
     const [pollType, setPollType] = useState('dynamic');
     const [topic, setTopic] = useState('');
     const [start, setStart] = useState('');
@@ -34,6 +43,16 @@ export default function CreatePage() {
             setLoading(false);
             return;
         }
+
+        const ethers = getEthers();
+
+        // ステップ1.1: モック使用状況確認のログ追加
+        console.log('Current ethers object:', typeof ethers);
+        console.log('Current ethers.Contract:', typeof ethers.Contract);
+        console.log('Is mock applied?', ethers.isMock);
+        console.log('Window.ethers:', (window as any).ethers);
+        console.log('Window.mockEthers:', (window as any).mockEthers);
+
         const r = new ethers.Contract(POLL_REGISTRY_ADDRESS, POLL_REGISTRY_ABI, signer);
         setRegistry(r);
         setLoading(false);
@@ -85,16 +104,21 @@ export default function CreatePage() {
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!registry) return;
+
+        const ethers = getEthers();
+
+        console.log('=== SUBMIT FUNCTION START ===');
+        console.log('ethers object:', typeof ethers);
+        console.log('ethers.isMock:', ethers.isMock);
+        console.log('signer:', signer);
+
+        if (!ethers || !signer) {
+            showToast('ウォレットが接続されていません');
+            return;
+        }
+
         const s = toTimestamp(start);
         const eTime = toTimestamp(end);
-
-        // toTimestamp関数の出力確認
-        console.log('toTimestamp output:', {
-            start: s,
-            end: eTime,
-            types: { start: typeof s, end: typeof eTime },
-        });
 
         if (Number.isNaN(s) || Number.isNaN(eTime)) {
             showToast('日時を正しく入力してください');
@@ -124,13 +148,19 @@ export default function CreatePage() {
             return;
         }
 
+        setTxPending(true);
+        showToast('トランザクション承認待ち…');
+
         try {
-            setTxPending(true);
-            showToast('トランザクション承認待ち…');
+            console.log('=== CREATING CONTRACT INSTANCE ===');
+            const registry = new ethers.Contract(POLL_REGISTRY_ADDRESS, POLL_REGISTRY_ABI, signer);
+            console.log('Registry contract instance:', registry);
+            console.log('Registry constructor:', registry.constructor.name);
+
             const filteredChoices = choices.filter((c) => c);
 
-            // パラメータの詳細ログ
-            console.log('Submit parameters:', {
+            console.log('=== CALLING CREATE POLL ===');
+            console.log('Calling createPoll with params:', {
                 pollTypeEnum,
                 topic,
                 s,
@@ -138,14 +168,8 @@ export default function CreatePage() {
                 filteredChoices,
                 tokenAddress,
             });
-            console.log('Parameter types:', {
-                pollTypeEnum: typeof pollTypeEnum,
-                s: typeof s,
-                eTime: typeof eTime,
-                tokenAddress: typeof tokenAddress,
-            });
 
-            // PollRegistry の createPoll を呼び出す
+            // トランザクションの送信
             const tx = await registry.createPoll(
                 pollTypeEnum,
                 topic,
@@ -155,33 +179,60 @@ export default function CreatePage() {
                 tokenAddress
             );
 
+            console.log('=== TRANSACTION RECEIVED ===');
+            console.log('Transaction object received:', tx);
+            console.log('Transaction hash:', tx.hash);
+            console.log('Transaction wait method:', typeof tx.wait);
+
+            // トランザクション完了の待機
+            console.log('=== WAITING FOR TRANSACTION ===');
             const receipt = await tx.wait();
+            console.log('Transaction confirmed:', receipt);
+            console.log('Receipt events:', receipt.events);
 
-            const event = receipt.logs
-                .map((log: any) => {
-                    try {
-                        return registry.interface.parseLog(log);
-                    } catch {
-                        return null;
-                    }
-                })
-                .find((log: any) => log && log.name === 'PollCreated');
+            // イベントの処理
+            console.log('=== PROCESSING EVENTS ===');
+            console.log('Receipt events:', receipt.events);
+            console.log('Events type:', typeof receipt.events);
+            console.log('Events length:', receipt.events?.length);
 
-            if (!event) {
-                showToast('作成された議題のアドレス取得に失敗しました');
-                return;
+            if (receipt.events) {
+                console.log('=== SEARCHING FOR POLL CREATED EVENT ===');
+                const pollCreatedEvent = receipt.events.find((event: any) => {
+                    console.log('Checking event:', event);
+                    console.log('Event event property:', event.event);
+                    console.log('Event event === PollCreated:', event.event === 'PollCreated');
+                    return event.event === 'PollCreated';
+                });
+
+                console.log('Found PollCreated event:', pollCreatedEvent);
+
+                if (pollCreatedEvent) {
+                    const pollId = pollCreatedEvent.args.pollId.toString();
+                    console.log('Poll ID extracted:', pollId);
+                    console.log('=== SHOWING SUCCESS TOAST ===');
+                    showToast('議題を作成しました');
+
+                    console.log('=== SCHEDULING REDIRECT ===');
+                    setTimeout(() => {
+                        console.log('=== EXECUTING REDIRECT ===');
+                        console.log('Redirecting to:', `/simple/${pollId}`);
+                        router.push(`/simple/${pollId}`);
+                    }, 2000);
+                } else {
+                    console.log('PollCreated event not found');
+                }
+            } else {
+                console.log('No events in receipt');
             }
-            const pollId = event.args.pollId;
-            showToast(`議題を作成しました (ID: ${pollId})`);
+        } catch (error) {
+            console.error('=== ERROR IN POLL CREATION ===');
+            console.error('Error:', error);
+            console.error('Error stack:', (error as Error).stack);
+            console.error('Error name:', (error as Error).name);
+            console.error('Error message:', (error as Error).message);
 
-            // 作成後にホームページにリダイレクト
-            setTimeout(() => {
-                router.push('/');
-            }, 2000);
-        } catch (err: any) {
-            console.error('投票作成エラー', err);
-            const msg = err.reason ?? err.shortMessage ?? err.message;
-            showToast(`エラー: ${msg}`);
+            showToast('エラーが発生しました');
         } finally {
             setTxPending(false);
         }

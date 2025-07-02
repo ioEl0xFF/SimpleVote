@@ -8,37 +8,39 @@
 testing/
 ├── README.md (このファイル)
 ├── plans/                    # テスト計画書
-│   ├── plan-playwright-test.md
-│   ├── plan-wallet-connection-test-fix.md
-│   └── plan-invalid-poll-id-error-fix.md
+│   ├── playwright-test.md
+│   ├── wallet-connection-test-fix.md
+│   ├── invalid-poll-id-error-fix.md
+│   └── transaction-completion-issue-fix.md
 ├── investigations/           # 問題調査報告
-│   ├── investigation-bignumberish-error.md
-│   ├── investigation-poll-creation-error.md
-│   ├── investigation-invalid-poll-id-error.md
-│   ├── investigation-invalid-poll-id-error-cause.md
-│   ├── investigation-basic-ui-navigation-issue.md
-│   └── investigation-wallet-connection-test.md
+│   ├── bignumberish-error.md
+│   ├── poll-creation-error.md
+│   ├── invalid-poll-id-error.md
+│   ├── invalid-poll-id-error-cause.md
+│   ├── basic-ui-navigation-issue.md
+│   ├── wallet-connection-test.md
+│   └── transaction-completion-issue.md
 ├── fixes/                    # 修正内容・修正ガイド
-│   ├── fix-bignumberish-error.md
-│   ├── fix-basic-ui-navigation.md
-│   └── fix-poll-creation-test.md
+│   ├── bignumberish-error.md
+│   ├── basic-ui-navigation.md
+│   ├── poll-creation-test.md
+│   └── transaction-completion-issue.md
 ├── guides/                   # 実装ガイド
-│   └── guide-poll-creation-test.md
+│   └── poll-creation-test.md
 └── results/                  # テスト結果報告
-    ├── results-overview.md
-    └── results-poll-creation.md
+    ├── analysis-results.md
+    ├── overview.md
+    ├── poll-creation.md
+    └── transaction-completion-issue.md
 ```
 
 ## ファイル命名規則
 
 - **すべて小文字**を使用
 - **ハイフン（-）**で単語を区切る
-- **プレフィックス**でファイルタイプを識別：
-  - `plan-` - テスト計画書
-  - `investigation-` - 問題調査報告
-  - `fix-` - 修正内容・修正ガイド
-  - `guide-` - 実装ガイド
-  - `results-` - テスト結果報告
+- **プレフィックスなし**の簡潔な命名：
+  - ファイル名から内容が明確に分かる命名
+  - ディレクトリ構造でファイルタイプを識別
 
 ## 各ディレクトリの説明
 
