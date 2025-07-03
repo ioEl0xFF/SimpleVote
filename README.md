@@ -108,16 +108,16 @@ npm run dev
 
 1.  フロントエンドを起動し、表示された URL をブラウザで開きます。
 2.  「ウォレット接続」ボタンを押して MetaMask などのウォレットと接続します。
-![ウォレット](docs/dapp-wallet.png)
+![ウォレット](docs/images/dapp-wallet.png)
 3.  「新規作成」から `DynamicVote` または `WeightedVote` の議題を作成します。
-![dynamic](docs/dapp-dynamic.png)
-![weighted](docs/dapp-weighted.png)
+![dynamic](docs/images/dapp-dynamic.png)
+![weighted](docs/images/dapp-weighted.png)
 4.  作成した議題を選択し、投票画面に遷移します。
-![home](docs/dapp-home.png)
+![home](docs/images/dapp-home.png)
 5.  投票したい選択肢を選び、「投票する」をクリックします。
-![dynamic](docs/dapp-dynamic.png)
+![dynamic](docs/images/dapp-dynamic.png)
     -   `WeightedVote` の場合は、投票前にトークン量を入力して「Approve」を実行してください。
-![weighted](docs/dapp-weighted.png)
+![weighted](docs/images/dapp-weighted.png)
 6.  投票済みの場合は「取消」ボタンで投票を取り消せます。
 7.  Poll一覧で、現在接続しているウォレットがオーナーであるPollには「削除」ボタンが表示されます。このボタンをクリックすると、そのPollはフロントエンドの表示から非表示になります（ブロックチェーン上からは削除されません）。
 

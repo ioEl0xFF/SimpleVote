@@ -1,0 +1,328 @@
+# SimpleVote プロジェクト - Cursor ルール
+
+## プロジェクト概要
+このプロジェクトは、SolidityスマートコントラクトとNext.jsフロントエンドを使用したブロックチェーン投票アプリケーションです。
+
+## 技術スタック
+- **バックエンド**: Solidity (スマートコントラクト)
+- **フロントエンド**: Next.js 15, React 19, TypeScript
+- **スタイリング**: Tailwind CSS
+- **テスト**: Playwright (E2E), Hardhat (スマートコントラクト)
+- **ブロックチェーン**: Ethereum (Hardhat)
+- **ウォレット**: Ethers.js
+
+## コーディング規約
+
+### Solidity (スマートコントラクト)
+- ファイル名: PascalCase (例: `PollRegistry.sol`)
+- コントラクト名: PascalCase
+- 関数名: camelCase
+- 定数: UPPER_SNAKE_CASE
+- イベント名: PascalCase
+- 修飾子: camelCase
+- インデント: 4スペース
+- 最大行長: 120文字
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract PollRegistry is Ownable {
+    // 定数
+    uint256 public constant MAX_POLL_OPTIONS = 10;
+    
+    // イベント
+    event PollCreated(uint256 indexed pollId, string title);
+    
+    // 構造体
+    struct Poll {
+        string title;
+        uint256 endTime;
+        bool isActive;
+    }
+    
+    // 状態変数
+    mapping(uint256 => Poll) public polls;
+    uint256 public pollCount;
+    
+    // 関数
+    function createPoll(string memory _title, uint256 _duration) 
+        external 
+        onlyOwner 
+        returns (uint256) 
+    {
+        // 実装
+    }
+}
+```
+
+### TypeScript/React (フロントエンド)
+- ファイル名: kebab-case (例: `poll-registry.tsx`)
+- コンポーネント名: PascalCase
+- 関数名: camelCase
+- 定数: UPPER_SNAKE_CASE
+- 型名: PascalCase
+- インデント: 2スペース
+- 最大行長: 100文字
+
+```typescript
+// コンポーネント
+interface PollData {
+  id: number;
+  title: string;
+  endTime: number;
+  isActive: boolean;
+}
+
+const PollList: React.FC<{ polls: PollData[] }> = ({ polls }) => {
+  const [selectedPoll, setSelectedPoll] = useState<PollData | null>(null);
+  
+  const handlePollSelect = (poll: PollData) => {
+    setSelectedPoll(poll);
+  };
+  
+  return (
+    <div className="space-y-4">
+      {polls.map((poll) => (
+        <PollCard 
+          key={poll.id}
+          poll={poll}
+          onSelect={handlePollSelect}
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+### テストファイル
+- ファイル名: `*.spec.ts` (Playwright), `*.js` (Hardhat)
+- テスト関数名: 説明的な名前
+- テストグループ: describe ブロックを使用
+
+```typescript
+// Playwright テスト
+import { test, expect } from '@playwright/test';
+
+test.describe('投票機能', () => {
+  test('新しい投票を作成できる', async ({ page }) => {
+    await page.goto('/create');
+    await page.fill('[data-testid="poll-title"]', 'テスト投票');
+    await page.click('[data-testid="create-poll"]');
+    
+    await expect(page.locator('.success-message')).toBeVisible();
+  });
+});
+```
+
+## ファイル構造規約
+
+### スマートコントラクト
+```
+contracts/
+├── PollRegistry.sol      # メインコントラクト
+├── MockERC20.sol         # テスト用トークン
+└── Lock.sol              # サンプルコントラクト
+```
+
+### フロントエンド
+```
+simple-vote-next/
+├── app/                  # Next.js App Router
+│   ├── page.tsx         # ホームページ
+│   ├── create/          # 投票作成
+│   ├── simple/          # シンプル投票
+│   ├── weighted/        # 重み付き投票
+│   └── dynamic/         # 動的投票
+├── components/          # React コンポーネント
+├── lib/                 # ユーティリティ関数
+└── tests/               # Playwright テスト
+```
+
+## 命名規約
+
+### 変数・関数名
+- 説明的で理解しやすい名前を使用
+- 略語は避ける
+- ブール値は `is`, `has`, `can` で始める
+
+```typescript
+// 良い例
+const isPollActive = true;
+const hasUserVoted = false;
+const canUserVote = true;
+const pollEndTime = 1234567890;
+
+// 悪い例
+const active = true;
+const voted = false;
+const canVote = true;
+const end = 1234567890;
+```
+
+### CSS クラス名
+- Tailwind CSS のユーティリティクラスを優先
+- カスタムクラスは kebab-case
+
+```tsx
+// 良い例
+<div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-md">
+  <h2 className="text-xl font-semibold text-gray-900">投票タイトル</h2>
+</div>
+
+// カスタムクラス
+<div className="poll-card poll-card--active">
+```
+
+## コメント規約
+
+### Solidity
+```solidity
+/**
+ * @title PollRegistry
+ * @dev 投票の作成・管理を行うコントラクト
+ */
+contract PollRegistry {
+    /**
+     * @dev 新しい投票を作成する
+     * @param _title 投票のタイトル
+     * @param _duration 投票期間（秒）
+     * @return pollId 作成された投票のID
+     */
+    function createPoll(string memory _title, uint256 _duration) 
+        external 
+        returns (uint256 pollId) 
+    {
+        // 実装
+    }
+}
+```
+
+### TypeScript
+```typescript
+/**
+ * 投票データの型定義
+ */
+interface PollData {
+  /** 投票の一意ID */
+  id: number;
+  /** 投票のタイトル */
+  title: string;
+  /** 投票終了時刻（Unix timestamp） */
+  endTime: number;
+  /** 投票がアクティブかどうか */
+  isActive: boolean;
+}
+
+/**
+ * 投票リストコンポーネント
+ * @param polls - 表示する投票の配列
+ * @param onPollSelect - 投票選択時のコールバック
+ */
+const PollList: React.FC<{
+  polls: PollData[];
+  onPollSelect: (poll: PollData) => void;
+}> = ({ polls, onPollSelect }) => {
+  // 実装
+};
+```
+
+## エラーハンドリング
+
+### Solidity
+```solidity
+// カスタムエラーを使用
+error PollNotFound(uint256 pollId);
+error PollAlreadyEnded(uint256 pollId);
+error UserAlreadyVoted(address user, uint256 pollId);
+
+function vote(uint256 _pollId, uint256 _optionId) external {
+    if (_pollId >= pollCount) {
+        revert PollNotFound(_pollId);
+    }
+    
+    Poll storage poll = polls[_pollId];
+    if (block.timestamp > poll.endTime) {
+        revert PollAlreadyEnded(_pollId);
+    }
+    
+    // 実装
+}
+```
+
+### TypeScript
+```typescript
+// エラーハンドリング
+try {
+  const result = await contract.createPoll(title, duration);
+  await result.wait();
+  toast.success('投票が作成されました');
+} catch (error) {
+  console.error('投票作成エラー:', error);
+  toast.error('投票の作成に失敗しました');
+}
+```
+
+## セキュリティ考慮事項
+
+### Solidity
+- アクセス制御を適切に実装
+- リエントランシー攻撃を防ぐ
+- 整数オーバーフローを防ぐ
+- 外部呼び出しは最後に実行
+
+### フロントエンド
+- ユーザー入力の検証
+- ウォレット接続の安全な処理
+- 機密情報の適切な管理
+
+## パフォーマンス最適化
+
+### Solidity
+- ガス効率を考慮した実装
+- 不要なストレージアクセスを避ける
+- イベントの適切な使用
+
+### React
+- 不要な再レンダリングを避ける
+- メモ化の適切な使用
+- 画像の最適化
+
+## テスト規約
+
+### 単体テスト
+- 各関数の正常系・異常系をテスト
+- エッジケースを考慮
+- モックの適切な使用
+
+### E2Eテスト
+- ユーザー操作の流れをテスト
+- 異なるブラウザでの動作確認
+- レスポンシブデザインのテスト
+
+## Git コミット規約
+```
+feat: 新機能の追加
+fix: バグ修正
+docs: ドキュメント更新
+style: コードスタイル修正
+refactor: リファクタリング
+test: テスト追加・修正
+chore: その他の変更
+```
+
+## 推奨ツール・拡張機能
+- Solidity 拡張機能
+- TypeScript 拡張機能
+- Tailwind CSS IntelliSense
+- ESLint
+- Prettier
+- GitLens
+
+## 注意事項
+- スマートコントラクトの変更は慎重に行う
+- テストを必ず実行してからコミットする
+- セキュリティレビューを定期的に行う
+- ドキュメントを常に最新に保つ 
