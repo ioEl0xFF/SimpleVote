@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SimpleVote Next.js Frontend
 
-## Getting Started
+SimpleVoteアプリケーションのNext.jsフロントエンドです。
 
-First, run the development server:
+## 🚀 開発環境のセットアップ
 
+### 前提条件
+- Node.js 18以上
+- npm または yarn
+
+### インストール
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 開発サーバーの起動
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+アプリケーションは [http://localhost:3000](http://localhost:3000) で起動します。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧪 テスト
 
-## Learn More
+### E2Eテスト（Playwright）
 
-To learn more about Next.js, take a look at the following resources:
+#### テストの実行
+```bash
+# 全テスト実行
+npm run test:e2e
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# UIモードでテスト実行
+npm run test:e2e:ui
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# ヘッド付きモードでテスト実行
+npm run test:e2e:headed
 
-## Deploy on Vercel
+# デバッグモードでテスト実行
+npm run test:e2e:debug
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# テストレポートの表示
+npm run test:e2e:report
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### チェックリスト自動更新機能
+
+SimpleVoteでは、テスト実行結果を自動でチェックリストに反映する機能を提供しています。
+
+```bash
+# テスト実行後にチェックリストを自動更新
+npm run test:e2e && npm run checklist:update
+
+# チェックリストの統計情報を表示
+npm run checklist:stats
+
+# 手動でチェックリスト項目を更新
+npm run checklist:manual -- --item "wallet-connection-接続ボタンの表示" --checked true
+```
+
+#### チェックリストの使用方法
+
+1. **テスト実装時**: チェックリストの項目に対応するテストを作成
+2. **テスト実行**: `npm run test:e2e` でテストを実行
+3. **自動更新**: `npm run checklist:update` でチェックリストを更新
+4. **進捗確認**: `npm run checklist:stats` で統計情報を確認
+
+#### CI/CD統合
+
+GitHub Actionsでテスト実行後に自動的にチェックリストが更新されます：
+
+- プルリクエスト時にテストが実行される
+- テスト結果に基づいてチェックリストが自動更新される
+- 進捗状況がPRにコメントされる
+
+## 📁 プロジェクト構造
+
+```
+simple-vote-next/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # ホームページ
+│   ├── create/            # 投票作成ページ
+│   ├── simple/            # シンプル投票ページ
+│   ├── weighted/          # 重み付き投票ページ
+│   └── dynamic/           # 動的投票ページ
+├── components/            # React コンポーネント
+├── lib/                   # ユーティリティ関数
+├── tests/                 # Playwright テスト
+│   ├── e2e/              # E2Eテストファイル
+│   └── helpers/          # テストヘルパー
+├── docs/                  # ドキュメント
+│   └── playwright-test-checklist.md  # テストチェックリスト
+└── scripts/               # スクリプト
+    └── update-checklist.js # チェックリスト更新スクリプト
+```
+
+## 🔧 技術スタック
+
+- **フレームワーク**: Next.js 15
+- **言語**: TypeScript
+- **スタイリング**: Tailwind CSS
+- **テスト**: Playwright
+- **ブロックチェーン**: Ethers.js
+- **ウォレット**: MetaMask対応
+
+## 📊 テストチェックリスト
+
+詳細なテスト項目は [docs/playwright-test-checklist.md](./docs/playwright-test-checklist.md) を参照してください。
+
+### 主要なテスト項目
+
+- ✅ ウォレット接続機能
+- ✅ ホームページ（投票一覧）
+- ✅ 投票作成ページ
+- ✅ シンプル投票ページ
+- ✅ 重み付き投票ページ
+- ✅ 動的投票ページ
+- ✅ レスポンシブデザイン
+- ✅ アクセシビリティ
+- ✅ ブラウザ互換性
+
+## 🤝 コントリビューション
+
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを作成
+
+## 📝 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。
