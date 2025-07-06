@@ -109,3 +109,118 @@ test-execution*.log
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Security and secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets.json
+.secrets
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+
+# Documentation build
+/docs/build/
+/docs/_build/
+
+# Local development
+.local/
+local/
+
+# Contract verification files
+flattened/
+flatten/
+
+# Gas reports
+gas-report.txt
+gas-report.json
+
+# Contract addresses (if auto-generated)
+contract-addresses.json
+deployed-addresses.json
+
+# Hardhat node data
+hardhat-node-data/
+
+# Foundry (if used in future)
+out/
+cache/
+broadcast/
+
+# Solidity coverage reports
+# Note: coverage/ is already covered above
+coverage.json
+lcov.info
+
+# Contract artifacts (if not needed in repo)
+# Note: These are already covered above, but kept for clarity
+
+# Test artifacts
+test-artifacts/
+test-cache/
+
+# Performance monitoring
+.nyc_output/
+# Note: coverage/ is already covered above
+
+# Bundle analysis
+.next/analyze/
+.next/bundle-analyzer/
+
+# Storybook
+storybook-static/
+
+# Sentry
+.sentryclirc
+
+# Vercel
+.vercel
+
+# Netlify
+.netlify
+
+# Local SSL certificates
+# Note: *.pem, *.crt, *.key are already covered in Security section
+
+# IDE specific (additional)
+*.code-workspace
+.history/
+*.sublime-*
+.atom/
+.brackets.json
+
+# OS specific (additional)
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Lock files (if using multiple package managers)
+# Note: package-lock.json is typically committed, but yarn.lock and pnpm-lock.yaml are alternatives
+yarn.lock
+pnpm-lock.yaml
+
+# Local configuration overrides
+.env.override
+config.local.js
+config.local.json
