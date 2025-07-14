@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
 import { POLL_REGISTRY_ABI, POLL_REGISTRY_ADDRESS, ZERO } from '@/lib/constants';
@@ -10,10 +10,11 @@ import PageHeader from '@/components/PageHeader';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 // SimpleVote ページコンポーネント
-export default function SimpleVotePage({ params }: { params: { pollId: string } }) {
+export default function SimpleVotePage({ params }: { params: Promise<{ pollId: string }> }) {
     const router = useRouter();
     const { signer, showToast } = useWallet();
-    const pollId = Number(params.pollId);
+    const resolvedParams = use(params);
+    const pollId = Number(resolvedParams.pollId);
 
     const [registry, setRegistry] = useState<ethers.Contract | null>(null);
     const [topic, setTopic] = useState('');
@@ -127,15 +128,22 @@ export default function SimpleVotePage({ params }: { params: { pollId: string } 
         }
     };
 
+    const handleCancelVoteKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            cancelVote();
+        }
+    };
+
     // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
+    if (isNaN(pollId) || pollId < 0) {
         return (
             <App>
                 <PageHeader
                     title="Simple Vote"
                     breadcrumbs={[
                         { label: 'Simple Vote', href: '/simple' },
-                        { label: `ID: ${params.pollId}` },
+                        { label: `ID: ${resolvedParams.pollId}` },
                     ]}
                 />
                 <section className="flex flex-col items-center gap-4 mt-10">
@@ -214,6 +222,7 @@ export default function SimpleVotePage({ params }: { params: { pollId: string } 
                             onChange={() => setSelected(1)}
                             checked={selected === 1}
                             disabled={votedId !== 0}
+                            aria-label="賛成に投票する"
                         />
                         賛成 ({agreeCount})
                     </label>
@@ -225,12 +234,15 @@ export default function SimpleVotePage({ params }: { params: { pollId: string } 
                             onChange={() => setSelected(2)}
                             checked={selected === 2}
                             disabled={votedId !== 0}
+                            aria-label="反対に投票する"
                         />
                         反対 ({disagreeCount})
                     </label>
                     <button
-                        className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
+                        className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         disabled={txPending || selected === null || votedId !== 0 || !inPeriod}
+                        aria-label={txPending ? '投票処理中...' : '投票を実行する'}
+                        type="submit"
                     >
                         投票する
                     </button>
@@ -238,9 +250,13 @@ export default function SimpleVotePage({ params }: { params: { pollId: string } 
 
                 {votedId !== 0 && (
                     <button
-                        className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
+                        className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         disabled={txPending || !inPeriod}
                         onClick={cancelVote}
+                        onKeyDown={handleCancelVoteKeyDown}
+                        aria-label={txPending ? '投票取消処理中...' : '投票を取り消す'}
+                        type="button"
+                        tabIndex={0}
                     >
                         取消
                     </button>

@@ -435,7 +435,7 @@ export const POLL_REGISTRY_ABI = [
         "type": "function"
     }
 ];
-export const POLL_REGISTRY_ADDRESS = '0xd0AfC087C4d0a65ae50CA930230D2DAa2880eB50';
+export const POLL_REGISTRY_ADDRESS = '0x7a16996a7Dff8363102788F70C98Cb9164A9d05f';
 
 export const ERC20_ABI = [
     {
@@ -781,6 +781,6 @@ export const ERC20_ABI = [
         "type": "function"
     }
 ];
-export const MOCK_ERC20_ADDRESS = '0x80F5d3170aE576F45c4ee4A4cB99f9011f4e3C7F';
+export const MOCK_ERC20_ADDRESS = '0x27E405Be9aB2e7eb2a855161f27FE86e3dCcB177';
 
 export const ZERO = '0x0000000000000000000000000000000000000000';

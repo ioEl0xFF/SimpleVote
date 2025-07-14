@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/components/WalletProvider';
@@ -38,7 +38,7 @@ function DynamicVote({
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!signer || POLL_REGISTRY_ADDRESS === ZERO) {
+        if (!signer) {
             setLoading(false);
             return;
         }
@@ -120,10 +120,17 @@ function DynamicVote({
         }
     };
 
-    if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) {
+    const handleCancelVoteKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            cancelVote();
+        }
+    };
+
+    if (pollId === undefined) {
         return (
             <section className="flex flex-col items-center gap-4 mt-10">
-                <p>PollRegistry コントラクトアドレスが未設定か、Poll ID が無効です</p>
+                <p>Poll ID が無効です</p>
             </section>
         );
     }
@@ -163,22 +170,29 @@ function DynamicVote({
                             onChange={() => setSelected(c.id)}
                             checked={selected === c.id}
                             disabled={votedId !== 0}
+                            aria-label={`${c.name}に投票する`}
                         />
                         {c.name} ({c.votes})
                     </label>
                 ))}
                 <button
-                    className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     disabled={txPending || selected === null || votedId !== 0 || !inPeriod}
+                    aria-label={txPending ? '投票処理中...' : '投票を実行する'}
+                    type="submit"
                 >
                     投票する
                 </button>
             </form>
             {votedId !== 0 && (
                 <button
-                    className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     disabled={txPending || !inPeriod}
                     onClick={cancelVote}
+                    onKeyDown={handleCancelVoteKeyDown}
+                    aria-label={txPending ? '投票取消処理中...' : '投票を取り消す'}
+                    type="button"
+                    tabIndex={0}
                 >
                     取消
                 </button>
@@ -189,20 +203,21 @@ function DynamicVote({
 }
 
 // 動的ルーティングページコンポーネント
-export default function DynamicVotePage({ params }: { params: { pollId: string } }) {
+export default function DynamicVotePage({ params }: { params: Promise<{ pollId: string }> }) {
     const { signer, showToast } = useWallet();
     const router = useRouter();
-    const pollId = Number(params.pollId);
+    const resolvedParams = use(params);
+    const pollId = Number(resolvedParams.pollId);
 
     // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
+    if (isNaN(pollId) || pollId < 0) {
         return (
             <App>
                 <PageHeader
                     title="Dynamic Vote"
                     breadcrumbs={[
                         { label: 'Dynamic Vote', href: '/dynamic' },
-                        { label: `ID: ${params.pollId}` },
+                        { label: `ID: ${resolvedParams.pollId}` },
                     ]}
                 />
                 <section className="flex flex-col items-center gap-4 mt-10">

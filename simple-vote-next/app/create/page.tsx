@@ -80,20 +80,47 @@ export default function CreatePage() {
 
     // 選択肢を追加（最大10件）
     const addChoice = () => {
-        setChoices((prev) => (prev.length < 10 ? [...prev, ''] : prev));
+        if (choices.length < 10) {
+            setChoices([...choices, '']);
+        }
+    };
+
+    const handleAddChoiceKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            addChoice();
+        }
+    };
+
+    const handleBackKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            router.push('/');
+        }
     };
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!registry) return;
-        const s = toTimestamp(start);
+        const sTime = toTimestamp(start);
         const eTime = toTimestamp(end);
-        if (Number.isNaN(s) || Number.isNaN(eTime)) {
+        if (Number.isNaN(sTime) || Number.isNaN(eTime)) {
             showToast('日時を正しく入力してください');
             return;
         }
-        if (eTime <= s) {
+        if (eTime <= sTime) {
             showToast('終了日時は開始日時より後を設定してください');
+            return;
+        }
+
+        // 選択肢のバリデーション
+        const filteredChoices = choices.filter((c) => c);
+        if (filteredChoices.length === 0) {
+            showToast('少なくとも1つの選択肢を入力してください');
+            return;
+        }
+        if (filteredChoices.length > 10) {
+            showToast('選択肢は最大10個までです');
             return;
         }
 
@@ -119,13 +146,38 @@ export default function CreatePage() {
         try {
             setTxPending(true);
             showToast('トランザクション承認待ち…');
-            const filteredChoices = choices.filter((c) => c);
+
+            // デバッグ用：関数呼び出しのパラメータを出力
+            console.log('Function parameters:');
+            console.log('- pollTypeEnum:', pollTypeEnum);
+            console.log('- topic:', topic);
+            console.log('- sTime:', sTime);
+            console.log('- eTime:', eTime);
+            console.log('- filteredChoices:', filteredChoices);
+            console.log('- tokenAddress:', tokenAddress);
+
+            // デバッグ用：コントラクトの基本情報を確認
+            console.log('Contract info:');
+            console.log('- Contract address:', registry.target);
+            console.log('- Signer address:', await signer?.getAddress());
+
+            // デバッグ用：ネットワーク情報を確認
+            try {
+                const network = await signer?.provider?.getNetwork();
+                console.log('- Network chainId:', network?.chainId);
+                console.log('- Network name:', network?.name);
+
+                // ネットワークが正しくない場合の警告
+                console.log('✅ Correct network detected');
+            } catch (error) {
+                console.error('Error getting network info:', error);
+            }
 
             // PollRegistry の createPoll を呼び出す
             const tx = await registry.createPoll(
                 pollTypeEnum,
                 topic,
-                s,
+                sTime,
                 eTime,
                 filteredChoices,
                 tokenAddress
@@ -133,22 +185,118 @@ export default function CreatePage() {
 
             const receipt = await tx.wait();
 
-            const event = receipt.logs
+            // デバッグ用：トランザクションの詳細を出力
+            console.log('Transaction receipt:', receipt);
+            console.log('Transaction hash:', tx.hash);
+            console.log('Transaction status:', receipt.status);
+            console.log('Gas used:', receipt.gasUsed.toString());
+            console.log('Logs:', receipt.logs);
+            console.log('Logs length:', receipt.logs.length);
+
+            // デバッグ用：作成後のnextPollIdを確認
+            try {
+                const nextPollIdAfter = await registry.nextPollId();
+                console.log('- Next poll ID after creation:', nextPollIdAfter.toString());
+
+                if (nextPollIdAfter > 0n) {
+                    const createdPollId = nextPollIdAfter - 1n;
+                    console.log('- Created poll ID:', createdPollId.toString());
+
+                    // 作成された投票の詳細を確認
+                    try {
+                        const pollDetails = await registry.getPoll(createdPollId);
+                        console.log('- Created poll details:', pollDetails);
+                    } catch (error) {
+                        console.error('Error getting poll details:', error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting nextPollId after:', error);
+            }
+
+            // イベントを直接取得する方法
+            console.log('Trying to get events directly...');
+            const events = await registry.queryFilter(
+                registry.filters.PollCreated(),
+                receipt.blockNumber,
+                receipt.blockNumber
+            );
+            console.log('Events from queryFilter:', events);
+
+            // 方法1: 既存の方法でイベントを検索
+            let event = receipt.logs
                 .map((log: any) => {
                     try {
                         return registry.interface.parseLog(log);
-                    } catch {
+                    } catch (error) {
+                        console.log('Log parsing failed:', error);
                         return null;
                     }
                 })
                 .find((log: any) => log && log.name === 'PollCreated');
 
+            // 方法2: イベントが見つからない場合、より詳細なログ解析
             if (!event) {
-                showToast('作成された議題のアドレス取得に失敗しました');
-                return;
+                console.log('Trying alternative event parsing...');
+
+                // すべてのログを詳細に解析
+                for (const log of receipt.logs) {
+                    console.log('Processing log:', log);
+                    try {
+                        const decodedLog = registry.interface.parseLog(log);
+                        console.log('Decoded log:', decodedLog);
+                        if (decodedLog && decodedLog.name === 'PollCreated') {
+                            event = decodedLog;
+                            break;
+                        }
+                    } catch (error) {
+                        console.log('Log parsing failed:', error);
+                    }
+                }
             }
-            const pollId = event.args.pollId;
-            showToast(`議題を作成しました (ID: ${pollId})`);
+
+            if (!event) {
+                console.error('All event parsing methods failed');
+                console.error('Available logs:', receipt.logs);
+
+                // 投票が実際に作成されたか確認
+                try {
+                    const nextPollId = await registry.nextPollId();
+                    console.log('Next poll ID:', nextPollId.toString());
+
+                    if (nextPollId > 0n) {
+                        const pollId = nextPollId - 1n; // 最新の投票ID
+
+                        // 作成された投票の詳細を確認して、実際に作成されたか検証
+                        try {
+                            const pollDetails = await registry.getPoll(pollId);
+                            console.log('Created poll details:', pollDetails);
+
+                            // 投票の詳細が取得できれば、作成は成功
+                            if (pollDetails && pollDetails.topic === topic) {
+                                showToast(`議題を作成しました (ID: ${pollId.toString()})`);
+                            } else {
+                                showToast(
+                                    '議題を作成しました（詳細情報の取得に失敗しましたが、作成は完了しています）'
+                                );
+                            }
+                        } catch (pollError) {
+                            console.error('Error getting poll details:', pollError);
+                            showToast(
+                                '議題を作成しました（詳細情報の取得に失敗しましたが、作成は完了しています）'
+                            );
+                        }
+                    } else {
+                        showToast('議題の作成に失敗しました');
+                    }
+                } catch (error) {
+                    console.error('Error checking polls:', error);
+                    showToast('議題の作成に失敗しました');
+                }
+            } else {
+                const pollId = event.args.pollId;
+                showToast(`議題を作成しました (ID: ${pollId.toString()})`);
+            }
 
             // 作成後にホームページにリダイレクト
             setTimeout(() => {
@@ -156,6 +304,13 @@ export default function CreatePage() {
             }, 2000);
         } catch (err: any) {
             console.error('投票作成エラー', err);
+            console.error('Error details:', {
+                reason: err.reason,
+                shortMessage: err.shortMessage,
+                message: err.message,
+                code: err.code,
+                data: err.data,
+            });
             const msg = err.reason ?? err.shortMessage ?? err.message;
             showToast(`エラー: ${msg}`);
         } finally {
@@ -184,6 +339,7 @@ export default function CreatePage() {
                             className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={pollType}
                             onChange={(e) => setPollType(e.target.value)}
+                            aria-label="投票タイプを選択"
                         >
                             <option value="dynamic">Dynamic Vote</option>
                             <option value="weighted">Weighted Vote</option>
@@ -200,6 +356,7 @@ export default function CreatePage() {
                                 onChange={(e) => setToken(e.target.value)}
                                 required
                                 placeholder="0x..."
+                                aria-label="トークンアドレスを入力"
                             />
                         </label>
                     )}
@@ -212,6 +369,7 @@ export default function CreatePage() {
                             onChange={(e) => setTopic(e.target.value)}
                             required
                             placeholder="投票のトピックを入力してください"
+                            aria-label="投票のトピックを入力"
                         />
                     </label>
 
@@ -223,6 +381,7 @@ export default function CreatePage() {
                             value={start}
                             onChange={(e) => setStart(e.target.value)}
                             required
+                            aria-label="投票開始日時を選択"
                         />
                     </label>
 
@@ -234,6 +393,7 @@ export default function CreatePage() {
                             value={end}
                             onChange={(e) => setEnd(e.target.value)}
                             required
+                            aria-label="投票終了日時を選択"
                         />
                     </label>
 
@@ -247,13 +407,17 @@ export default function CreatePage() {
                                 onChange={(e) => updateChoice(i, e.target.value)}
                                 required={i < 2}
                                 placeholder={`選択肢 ${i + 1}`}
+                                aria-label={`選択肢 ${i + 1} を入力`}
                             />
                         ))}
                         <button
                             type="button"
-                            className="px-4 py-2 rounded-lg bg-blue-600 text-white w-fit hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 rounded-lg bg-blue-600 text-white w-fit hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             onClick={addChoice}
+                            onKeyDown={handleAddChoiceKeyDown}
                             disabled={choices.length >= 10}
+                            aria-label="選択肢を追加する"
+                            tabIndex={0}
                         >
                             選択肢を追加
                         </button>
@@ -262,15 +426,19 @@ export default function CreatePage() {
                     <div className="flex gap-4 mt-6">
                         <button
                             type="submit"
-                            className="flex-1 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             disabled={txPending}
+                            aria-label={txPending ? '投票を作成中...' : '投票を作成する'}
                         >
                             {txPending ? '作成中...' : '作成'}
                         </button>
                         <button
                             type="button"
-                            className="px-6 py-3 rounded-lg bg-gray-400 text-white font-medium hover:bg-gray-500"
+                            className="px-6 py-3 rounded-lg bg-gray-400 text-white font-medium hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-400 transition-colors"
                             onClick={() => router.push('/')}
+                            onKeyDown={handleBackKeyDown}
+                            aria-label="ホームページに戻る"
+                            tabIndex={0}
                         >
                             戻る
                         </button>

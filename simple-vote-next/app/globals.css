@@ -25,6 +25,40 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* アクセシビリティ改善のためのCSS追加 - より強力な制御 */
+*:focus {
+  outline: none !important;
+}
+
+*:focus-visible {
+  outline: none !important;
+}
+
+button:focus,
+button:focus-visible,
+button:focus-within {
+  outline: none !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+}
+
+/* より具体的なセレクタでoutlineを制御 */
+button[type="button"]:focus,
+button[type="button"]:focus-visible {
+  outline: none !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+}
+
+/* フォーカスリングの確実な表示 */
+.focus\:ring-2:focus {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #9333ea !important;
+}
+
 /* トースト表示用のスタイル */
 .toast-container {
   position: fixed;

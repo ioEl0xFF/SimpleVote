@@ -125,7 +125,19 @@ function PollList({
             <ul className="flex flex-col gap-1">
                 {polls.map((p) => (
                     <li key={p.id}>
-                        <button className="underline text-blue-600" onClick={() => onSelect(p)}>
+                        <button
+                            className="underline text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                            onClick={() => onSelect(p)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onSelect(p);
+                                }
+                            }}
+                            aria-label={`${p.type}投票「${p.topic}」を選択する`}
+                            type="button"
+                            tabIndex={0}
+                        >
                             {p.type} : {p.topic} (ID: {p.id})
                         </button>
                     </li>
@@ -145,10 +157,24 @@ function PollListPage({
     onSelect: (poll: Poll) => void;
     onCreate: () => void;
 }) {
+    const handleCreateKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onCreate();
+        }
+    };
+
     return (
         <div className="flex flex-col gap-4 mt-4">
             <div className="flex gap-2">
-                <button className="px-4 py-2 rounded-xl bg-green-600 text-white" onClick={onCreate}>
+                <button
+                    className="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-green-600 transition-colors"
+                    onClick={onCreate}
+                    onKeyDown={handleCreateKeyDown}
+                    aria-label="新しい投票を作成する"
+                    type="button"
+                    tabIndex={0}
+                >
                     新規作成
                 </button>
             </div>

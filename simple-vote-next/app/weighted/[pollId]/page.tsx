@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/components/WalletProvider';
@@ -148,6 +148,20 @@ function WeightedVote({
         }
     };
 
+    const handleApproveKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            approve();
+        }
+    };
+
+    const handleCancelVoteKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            cancelVote();
+        }
+    };
+
     // コントラクトが未設定なら簡易メッセージを表示
     if (POLL_REGISTRY_ADDRESS === ZERO || pollId === undefined) {
         return (
@@ -193,6 +207,7 @@ function WeightedVote({
                             onChange={() => setSelected(c.id)}
                             checked={selected === c.id}
                             disabled={votedId !== 0}
+                            aria-label={`${c.name}に投票する`}
                         />
                         {c.name} ({c.votes})
                     </label>
@@ -203,33 +218,43 @@ function WeightedVote({
                     placeholder="トークン量"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="border px-2 py-1 rounded"
+                    className="border px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={votedId !== 0}
+                    aria-label="投票するトークン量を入力"
                 />
                 <button
                     type="button"
-                    className="px-4 py-2 rounded-xl bg-green-500 text-white disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-green-500 text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     onClick={approve}
+                    onKeyDown={handleApproveKeyDown}
                     disabled={
                         !amount || selected === null || votedId !== 0 || tokenAddress === ZERO
                     }
+                    aria-label="トークンの使用を承認する"
+                    tabIndex={0}
                 >
                     Approve
                 </button>
                 <button
-                    className="px-4 py-2 rounded-xl bg-blue-500 text-white disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     disabled={
                         txPending || selected === null || !amount || votedId !== 0 || !inPeriod
                     }
+                    aria-label={txPending ? '投票処理中...' : '投票を実行する'}
+                    type="submit"
                 >
                     投票する
                 </button>
             </form>
             {votedId !== 0 && (
                 <button
-                    className="px-4 py-2 rounded-xl bg-red-500 text-white disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     disabled={txPending || !inPeriod}
                     onClick={cancelVote}
+                    onKeyDown={handleCancelVoteKeyDown}
+                    aria-label={txPending ? '投票取消処理中...' : '投票を取り消す'}
+                    type="button"
+                    tabIndex={0}
                 >
                     取消
                 </button>
@@ -240,20 +265,21 @@ function WeightedVote({
 }
 
 // 動的ルーティングページコンポーネント
-export default function WeightedVotePage({ params }: { params: { pollId: string } }) {
+export default function WeightedVotePage({ params }: { params: Promise<{ pollId: string }> }) {
     const { signer, showToast } = useWallet();
     const router = useRouter();
-    const pollId = Number(params.pollId);
+    const resolvedParams = use(params);
+    const pollId = Number(resolvedParams.pollId);
 
     // pollIdが無効な場合の処理
-    if (isNaN(pollId) || pollId <= 0) {
+    if (isNaN(pollId) || pollId < 0) {
         return (
             <App>
                 <PageHeader
                     title="Weighted Vote"
                     breadcrumbs={[
                         { label: 'Weighted Vote', href: '/weighted' },
-                        { label: `ID: ${params.pollId}` },
+                        { label: `ID: ${resolvedParams.pollId}` },
                     ]}
                 />
                 <section className="flex flex-col items-center gap-4 mt-10">

@@ -15,7 +15,25 @@ function Toast({ message, onClose }: ToastProps) {
         return () => clearTimeout(timer);
     }, [onClose]);
 
-    return <div className="toast">{message}</div>;
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            onClose();
+        }
+    };
+
+    return (
+        <div
+            className="toast bg-white border border-gray-200 rounded-lg shadow-lg p-4 mb-2 max-w-sm"
+            role="alert"
+            aria-live="assertive"
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
+            aria-label={`通知: ${message}`}
+        >
+            {message}
+        </div>
+    );
 }
 
 export default Toast;
