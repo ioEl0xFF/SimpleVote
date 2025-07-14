@@ -525,3 +525,113 @@ test.describe('ホームページ基本機能', () => {
         await expect(page.locator('text=新規作成')).not.toBeVisible();
     });
 });
+
+// MSWベースのテスト（実験的）
+test.describe('ホームページ基本機能 - MSWバージョン', () => {
+
+    test('投票一覧が表示される（MSW版）', async ({ page }) => {
+        console.log('[Test] MSWを使用したテストを開始');
+
+        // 包括的なethereumプロバイダーをモック
+        await page.addInitScript(() => {
+            // Mock poll data to return
+            const mockPollData = '0x' +
+                '0000000000000000000000000000000000000000000000000000000000000080' +
+                '00000000000000000000000000000000000000000000000000000000000000c0' +
+                '0000000000000000000000000000000000000000000000000000000000000100' +
+                '0000000000000000000000000000000000000000000000000000000000000140' +
+                '0000000000000000000000000000000000000000000000000000000000000003' + // pollIds.length = 3
+                '0000000000000000000000000000000000000000000000000000000000000001' + // pollId: 1
+                '0000000000000000000000000000000000000000000000000000000000000002' + // pollId: 2
+                '0000000000000000000000000000000000000000000000000000000000000003' + // pollId: 3
+                '0000000000000000000000000000000000000000000000000000000000000003' + // pollTypes.length = 3
+                '0000000000000000000000000000000000000000000000000000000000000000' + // type: 0
+                '0000000000000000000000000000000000000000000000000000000000000001' + // type: 1
+                '0000000000000000000000000000000000000000000000000000000000000002' + // type: 2
+                '0000000000000000000000000000000000000000000000000000000000000003' + // owners.length = 3
+                '000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266' + // owner
+                '000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266' + // owner
+                '000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266' + // owner
+                '0000000000000000000000000000000000000000000000000000000000000003' + // topics.length = 3
+                '0000000000000000000000000000000000000000000000000000000000000060' + // topic 1 offset
+                '00000000000000000000000000000000000000000000000000000000000000a0' + // topic 2 offset
+                '00000000000000000000000000000000000000000000000000000000000000e0' + // topic 3 offset
+                '000000000000000000000000000000000000000000000000000000000000001b' + // topic 1 length
+                'e38397e383ade382b8e382a7e382afe38388e381aee696b9e59091e680a7e381ab000000000000' + // "プロジェクトの方向性"
+                '0000000000000000000000000000000000000000000000000000000000000018' + // topic 2 length
+                'e68a80e8a193e382b9e382bfe38383e382afe381aee981b8e68a9e0000000000' + // "技術スタックの選択"
+                '0000000000000000000000000000000000000000000000000000000000000018' + // topic 3 length
+                'e38381e383bce383a0e383aae383bce38380e383bce381aee981b8e587ba000000'; // "チームリーダーの選出"
+
+            (window as any).ethereum = {
+                request: async ({ method, params }: { method: string, params?: any[] }) => {
+                    console.log(`[Mock] ethereum.request: ${method}`, params);
+                    
+                    switch (method) {
+                        case 'eth_requestAccounts':
+                            return ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'];
+                        case 'eth_chainId':
+                            return '0x7a69'; // Hardhat chain ID
+                        case 'eth_call':
+                            // getPolls() method signature detection
+                            if (params && params[0] && params[0].data && params[0].data.startsWith('0x5c01f867')) {
+                                console.log('[Mock] getPolls() detected, returning mock data');
+                                return mockPollData;
+                            }
+                            return '0x';
+                        case 'eth_blockNumber':
+                            return '0x1';
+                        case 'eth_accounts':
+                            return ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'];
+                        case 'eth_getBalance':
+                            return '0x21e19e0c9bab2400000';
+                        case 'net_version':
+                            return '31337';
+                        default:
+                            console.log(`[Mock] Unhandled method: ${method}`);
+                            return null;
+                    }
+                },
+                on: () => {},
+                removeListener: () => {},
+                isMetaMask: true,
+            };
+        });
+
+        // ページに移動（MSWが自動的にRPCコールをモック）
+        await page.goto('/');
+
+        // ウォレット接続ボタンをクリック
+        const connectButton = page.locator('text=ウォレット接続');
+        await expect(connectButton).toBeVisible();
+        await connectButton.click();
+
+        console.log('[Test] ウォレット接続ボタンをクリックしました');
+
+        // ウォレット接続が完了するまで待機
+        await expect(page.locator('text=ウォレット接続')).not.toBeVisible({
+            timeout: 10000
+        });
+
+        console.log('[Test] ウォレット接続が完了しました');
+
+        // Poll 一覧の見出しが表示されるまで待機
+        await expect(page.locator('h2').filter({ hasText: 'Poll 一覧' })).toBeVisible({
+            timeout: 15000
+        });
+
+        console.log('[Test] Poll一覧が表示されました');
+
+        // 投票データが表示されることを確認（日本語文字が正しく表示されるかテスト）
+        await expect(page.locator('text=プロジェクトの方向性')).toBeVisible();
+        await expect(page.locator('text=技術スタック')).toBeVisible();
+        await expect(page.locator('text=チームリーダー')).toBeVisible();
+
+        console.log('[Test] 投票データの表示を確認しました');
+
+        // 新規作成ボタンが表示されることを確認
+        await expect(page.locator('text=新規作成')).toBeVisible();
+
+        console.log('[Test] MSWテストが正常に完了しました');
+    });
+});
