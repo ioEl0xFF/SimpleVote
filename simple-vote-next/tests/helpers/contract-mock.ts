@@ -37,8 +37,34 @@ export async function setupContractMock(page: any, config: ContractMockConfig = 
             (window as any).ethers = {};
         }
 
+        // デバッグ用のログ
+        console.log('Contract mock initialized with polls:', config.polls?.length || 0);
+
+        // webpack環境でのモジュール上書きを試行
+        if ((window as any).__webpack_require__) {
+            console.log('Webpack environment detected, attempting module override');
+            try {
+                // ethersモジュールのパスを探す
+                const webpackRequire = (window as any).__webpack_require__;
+                const modules = webpackRequire.cache || {};
+
+                for (const key in modules) {
+                    if (key.includes('ethers') && modules[key] && modules[key].exports) {
+                        console.log('Found ethers module at:', key);
+                        // Contract クラスを上書き
+                        if (modules[key].exports.Contract) {
+                            console.log('Overriding ethers.Contract in module:', key);
+                            modules[key].exports.Contract = (window as any).ethers.Contract;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('Module override failed:', error);
+            }
+        }
+
         // Contractクラスをモック（既存のモックがある場合は上書き）
-        (window as any).ethers.Contract = class MockContract {
+        class MockContract {
             public address: string;
             public abi: any;
             public signer: any;
@@ -47,6 +73,12 @@ export async function setupContractMock(page: any, config: ContractMockConfig = 
             private _errorMessage: string;
 
             constructor(address: string, abi: any, signer: any) {
+                console.log(
+                    'MockContract initialized with address:',
+                    address,
+                    'polls count:',
+                    config.polls?.length || 0
+                );
                 this.address = address;
                 this.abi = abi;
                 this.signer = signer;
@@ -56,7 +88,10 @@ export async function setupContractMock(page: any, config: ContractMockConfig = 
             }
 
             async getPolls() {
+                console.log('Contract.getPolls() called with', this._polls.length, 'polls');
+
                 if (this._shouldFail) {
+                    console.log('Contract.getPolls() failing with error:', this._errorMessage);
                     throw new Error(this._errorMessage);
                 }
 
@@ -76,7 +111,9 @@ export async function setupContractMock(page: any, config: ContractMockConfig = 
                 const owners = this._polls.map((p) => p.owner);
                 const topics = this._polls.map((p) => p.topic);
 
-                return [pollIds, pollTypes, owners, topics];
+                const result = [pollIds, pollTypes, owners, topics];
+                console.log('Contract.getPolls() returning:', result);
+                return result;
             }
 
             async getPoll(pollId: number) {
@@ -138,7 +175,45 @@ export async function setupContractMock(page: any, config: ContractMockConfig = 
                     decodeFunctionResult: () => [],
                 };
             }
-        };
+        }
+
+        // window.ethersにモッククラスを設定
+        (window as any).ethers.Contract = MockContract;
+
+        // 実際のethersライブラリが読み込まれた後にもモックで上書きするため、
+        // 遅延実行でグローバルスコープのethersも上書きを試行
+        setTimeout(() => {
+            console.log('Attempting to override loaded ethers library...');
+
+            // グローバルスコープでのethers確認
+            if ((window as any).ethers && (window as any).ethers !== MockContract) {
+                console.log('Found global ethers, overriding Contract class');
+                (window as any).ethers.Contract = MockContract;
+            }
+
+            // requirejs/CommonJS環境での上書き試行
+            if (typeof require !== 'undefined') {
+                try {
+                    const ethersModule = require('ethers');
+                    if (ethersModule && ethersModule.Contract) {
+                        console.log('Found ethers via require, overriding Contract class');
+                        ethersModule.Contract = MockContract;
+                    }
+                } catch (e) {
+                    console.log('require approach failed:', e);
+                }
+            }
+
+            // ESモジュール環境での動的上書き試行
+            try {
+                if ((globalThis as any).ethers) {
+                    console.log('Found ethers in globalThis, overriding Contract class');
+                    (globalThis as any).ethers.Contract = MockContract;
+                }
+            } catch (e) {
+                console.log('globalThis approach failed:', e);
+            }
+        }, 100); // Next.jsのハイドレーション後に実行
 
         // ethers.js v6の他のクラスもモック（既存のモックがある場合は上書きしない）
         if (!(window as any).ethers.BrowserProvider) {

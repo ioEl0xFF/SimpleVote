@@ -4,6 +4,8 @@
  */
 
 import { Page, expect } from '@playwright/test';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 /**
  * ページの読み込み完了を待機
@@ -72,7 +74,170 @@ export async function takeScreenshot(page: Page, name: string) {
 }
 
 /**
- * コンソールログを取得
+ * コンソールログの収集と保存用クラス
+ */
+export class ConsoleLogger {
+    private logs: Array<{
+        timestamp: string;
+        type: string;
+        message: string;
+        url?: string;
+        location?: string;
+    }> = [];
+    private page: Page;
+    private testName: string;
+
+    constructor(page: Page, testName: string) {
+        this.page = page;
+        this.testName = testName;
+        this.setupConsoleListener();
+    }
+
+    /**
+     * コンソールリスナーを設定
+     */
+    private setupConsoleListener() {
+        this.page.on('console', (msg) => {
+            const location = msg.location();
+            this.logs.push({
+                timestamp: new Date().toISOString(),
+                type: msg.type(),
+                message: msg.text(),
+                url: location?.url,
+                location: location
+                    ? `${location.url}:${location.lineNumber}:${location.columnNumber}`
+                    : undefined,
+            });
+        });
+
+        // ページエラーもキャプチャ
+        this.page.on('pageerror', (error) => {
+            this.logs.push({
+                timestamp: new Date().toISOString(),
+                type: 'error',
+                message: `Page Error: ${error.message}`,
+                location: error.stack,
+            });
+        });
+
+        // リクエストエラーもキャプチャ
+        this.page.on('requestfailed', (request) => {
+            this.logs.push({
+                timestamp: new Date().toISOString(),
+                type: 'network-error',
+                message: `Request Failed: ${request.url()} - ${request.failure()?.errorText}`,
+            });
+        });
+    }
+
+    /**
+     * ログを取得
+     */
+    getLogs() {
+        return [...this.logs];
+    }
+
+    /**
+     * ログをファイルに保存
+     * @param filePath 保存先ファイルパス（省略時は自動生成）
+     */
+    async saveLogsToFile(filePath?: string) {
+        if (!filePath) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const sanitizedTestName = this.testName.replace(/[^a-zA-Z0-9]/g, '_');
+            filePath = path.join(
+                'test-results',
+                'console-logs',
+                `${sanitizedTestName}_${timestamp}.json`
+            );
+        }
+
+        // ディレクトリが存在しない場合は作成
+        const dir = path.dirname(filePath);
+        await fs.mkdir(dir, { recursive: true });
+
+        const logData = {
+            testName: this.testName,
+            timestamp: new Date().toISOString(),
+            url: this.page.url(),
+            logs: this.logs,
+            summary: {
+                total: this.logs.length,
+                byType: this.logs.reduce((acc, log) => {
+                    acc[log.type] = (acc[log.type] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>),
+            },
+        };
+
+        await fs.writeFile(filePath, JSON.stringify(logData, null, 2), 'utf-8');
+        return filePath;
+    }
+
+    /**
+     * ログをテキスト形式で保存
+     * @param filePath 保存先ファイルパス（省略時は自動生成）
+     */
+    async saveLogsAsText(filePath?: string) {
+        if (!filePath) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const sanitizedTestName = this.testName.replace(/[^a-zA-Z0-9]/g, '_');
+            filePath = path.join(
+                'test-results',
+                'console-logs',
+                `${sanitizedTestName}_${timestamp}.txt`
+            );
+        }
+
+        // ディレクトリが存在しない場合は作成
+        const dir = path.dirname(filePath);
+        await fs.mkdir(dir, { recursive: true });
+
+        const logText = [
+            `Test: ${this.testName}`,
+            `URL: ${this.page.url()}`,
+            `Timestamp: ${new Date().toISOString()}`,
+            `Total Logs: ${this.logs.length}`,
+            '',
+            '=== Console Logs ===',
+            '',
+            ...this.logs.map((log) => {
+                const location = log.location ? ` (${log.location})` : '';
+                return `[${log.timestamp}] ${log.type.toUpperCase()}: ${log.message}${location}`;
+            }),
+        ].join('\n');
+
+        await fs.writeFile(filePath, logText, 'utf-8');
+        return filePath;
+    }
+
+    /**
+     * エラーログのみを取得
+     */
+    getErrorLogs() {
+        return this.logs.filter(
+            (log) => log.type === 'error' || log.type === 'network-error' || log.type === 'warning'
+        );
+    }
+
+    /**
+     * 特定タイプのログを取得
+     * @param types フィルタするログタイプ
+     */
+    getLogsByType(types: string[]) {
+        return this.logs.filter((log) => types.includes(log.type));
+    }
+
+    /**
+     * ログをクリア
+     */
+    clear() {
+        this.logs = [];
+    }
+}
+
+/**
+ * コンソールログを取得（既存関数を互換性のために保持）
  * @param page Playwrightのpageオブジェクト
  */
 export async function getConsoleLogs(page: Page): Promise<string[]> {
@@ -83,6 +248,44 @@ export async function getConsoleLogs(page: Page): Promise<string[]> {
     });
 
     return logs;
+}
+
+/**
+ * テスト用コンソールログセットアップ
+ * @param page Playwrightのpageオブジェクト
+ * @param testName テスト名
+ * @param options オプション設定
+ */
+export function setupConsoleLogging(
+    page: Page,
+    testName: string,
+    options: {
+        autoSave?: boolean;
+        saveFormat?: 'json' | 'text' | 'both';
+        filterTypes?: string[];
+    } = {}
+) {
+    const logger = new ConsoleLogger(page, testName);
+
+    if (options.autoSave) {
+        // テスト終了時に自動保存
+        page.on('close', async () => {
+            try {
+                if (options.saveFormat === 'text') {
+                    await logger.saveLogsAsText();
+                } else if (options.saveFormat === 'both') {
+                    await logger.saveLogsToFile();
+                    await logger.saveLogsAsText();
+                } else {
+                    await logger.saveLogsToFile();
+                }
+            } catch (error) {
+                console.error('Failed to save console logs:', error);
+            }
+        });
+    }
+
+    return logger;
 }
 
 /**
@@ -229,4 +432,91 @@ export function generateTestData(count: number, type: 'polls' | 'users' | 'trans
         default:
             return [];
     }
+}
+
+/**
+ * テスト失敗時でもコンソールログを保存するヘルパー関数
+ * @param page Playwrightのpageオブジェクト
+ * @param testName テスト名
+ * @param testFunction テスト関数
+ * @param options オプション設定
+ */
+export async function withConsoleLogging<T>(
+    page: Page,
+    testName: string,
+    testFunction: (logger: ConsoleLogger) => Promise<T>,
+    options: {
+        saveFormat?: 'json' | 'text' | 'both';
+        enableDetailedErrorLogging?: boolean;
+    } = {}
+): Promise<T> {
+    const logger = setupConsoleLogging(page, testName, {
+        autoSave: false,
+        saveFormat: options.saveFormat || 'both',
+    });
+
+    try {
+        return await testFunction(logger);
+    } finally {
+        // テスト成功/失敗に関わらず、コンソールログを保存
+        try {
+            const jsonLogPath = await logger.saveLogsToFile();
+            const textLogPath = await logger.saveLogsAsText();
+
+            console.log(`Console logs saved to: ${jsonLogPath}`);
+            console.log(`Console logs saved to: ${textLogPath}`);
+
+            // エラーログの確認
+            const errorLogs = logger.getErrorLogs();
+            if (errorLogs.length > 0) {
+                console.log('Error logs found:', errorLogs.length);
+
+                if (options.enableDetailedErrorLogging) {
+                    console.log(
+                        'Error details:',
+                        errorLogs.map((log) => ({
+                            type: log.type,
+                            message:
+                                log.message.substring(0, 200) +
+                                (log.message.length > 200 ? '...' : ''),
+                            timestamp: log.timestamp,
+                            location: log.location,
+                        }))
+                    );
+                }
+            }
+
+            // ログの統計情報
+            const allLogs = logger.getLogs();
+            const logSummary = allLogs.reduce((acc, log) => {
+                acc[log.type] = (acc[log.type] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+
+            console.log(`Total logs captured: ${allLogs.length}`);
+            console.log('Log summary by type:', logSummary);
+        } catch (saveError) {
+            console.error('Failed to save console logs:', saveError);
+        }
+    }
+}
+
+/**
+ * 自動コンソールログ保存付きテスト実行
+ * @param testName テスト名
+ * @param testFn テスト関数
+ * @param options オプション設定
+ */
+export function testWithConsoleLogging(
+    testName: string,
+    testFn: (page: Page, logger: ConsoleLogger) => Promise<void>,
+    options: {
+        saveFormat?: 'json' | 'text' | 'both';
+        enableDetailedErrorLogging?: boolean;
+        timeout?: number;
+    } = {}
+) {
+    return async ({ page }: { page: Page }) => {
+        await withConsoleLogging(page, testName, (logger) => testFn(page, logger), options);
+    };
 }
